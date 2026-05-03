@@ -1,0 +1,17 @@
+# Global shared configuration for all services
+# This file contains common settings shared across all microservices
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    org.springframework.web: INFO
+    org.springframework.boot: INFO
+
