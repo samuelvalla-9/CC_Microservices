@@ -167,7 +167,7 @@ class PatientTreatmentServiceTest {
 
         when(patientRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> patientTreatmentService.addTreatment(20L, req))
+        assertThatThrownBy(() -> patientTreatmentService.addTreatment(req))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -179,7 +179,7 @@ class PatientTreatmentServiceTest {
 
         when(patientRepository.findById(1L)).thenReturn(Optional.of(mockPatient));
 
-        assertThatThrownBy(() -> patientTreatmentService.addTreatment(20L, req))
+        assertThatThrownBy(() -> patientTreatmentService.addTreatment(req))
                 .isInstanceOf(BadRequestException.class);
     }
 
@@ -198,7 +198,7 @@ class PatientTreatmentServiceTest {
         when(patientRepository.findById(1L)).thenReturn(Optional.of(mockPatient));
         when(staffClient.getStaffById(20L)).thenReturn(apiResponse);
 
-        assertThatThrownBy(() -> patientTreatmentService.addTreatment(20L, req))
+        assertThatThrownBy(() -> patientTreatmentService.addTreatment(req))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("DOCTOR or NURSE");
     }
@@ -220,7 +220,7 @@ class PatientTreatmentServiceTest {
         when(staffClient.getStaffById(20L)).thenReturn(apiResponse);
         when(treatmentRepository.save(any())).thenReturn(mockTreatment);
 
-        Treatment result = patientTreatmentService.addTreatment(20L, req);
+        Treatment result = patientTreatmentService.addTreatment(req);
 
         assertThat(result.getTreatmentId()).isEqualTo(1L);
         verify(treatmentRepository).save(any(Treatment.class));

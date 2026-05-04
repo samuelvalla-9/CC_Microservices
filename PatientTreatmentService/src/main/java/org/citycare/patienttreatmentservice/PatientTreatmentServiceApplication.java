@@ -15,7 +15,7 @@ public class PatientTreatmentServiceApplication {
     public static void main(String[] args) {
         SpringApplication.run(PatientTreatmentServiceApplication.class, args);
         System.out.println("Patient service started port : 8082");
-        System.out.println("owner is vinay");
+        System.out.println("owner is Tamizh");
     }
 
 }
