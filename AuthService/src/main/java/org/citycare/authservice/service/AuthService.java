@@ -155,16 +155,26 @@ public class AuthService {
 
     @Transactional
     public User deactivateUser(Long id) {
+        log.info("Deactivating user with id: {}", id);
         User user = getUserById(id);
+        log.info("Found user: {} with current status: {}", user.getEmail(), user.getStatus());
         user.setStatus(User.Status.INACTIVE);
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        userRepository.flush();
+        log.info("User {} deactivated. New status: {}", saved.getEmail(), saved.getStatus());
+        return saved;
     }
 
     @Transactional
     public User activateUser(Long id) {
+        log.info("Activating user with id: {}", id);
         User user = getUserById(id);
+        log.info("Found user: {} with current status: {}", user.getEmail(), user.getStatus());
         user.setStatus(User.Status.ACTIVE);
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        userRepository.flush();
+        log.info("User {} activated. New status: {}", saved.getEmail(), saved.getStatus());
+        return saved;
     }
 
     private void validateUniqueEmail(String email) {
