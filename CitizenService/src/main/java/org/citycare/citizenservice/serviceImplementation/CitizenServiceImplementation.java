@@ -56,6 +56,7 @@ public class CitizenServiceImplementation implements CitizenService {
     @Transactional
     public Citizen createOrUpdateProfile(Long userId, CitizenProfileRequest req) {
 
+        log.info("Updating profile for userId={}, request={}", userId, req);
 
         Citizen citizen = citizenRepository.findById(userId)
                 .orElse(new Citizen());
@@ -68,23 +69,30 @@ public class CitizenServiceImplementation implements CitizenService {
         citizen.setContactInfo(req.getContactInfo());
         citizen.setStatus(Citizen.Status.ACTIVE);
 
+        // Save citizen first
+        Citizen saved = citizenRepository.save(citizen);
+        log.info("Citizen saved successfully: {}", saved.getCitizenId());
 
-        authClient.updateUserProfile(
-                userId,
-                new UserProfileUpdateRequest(
-                        req.getName(),
-                        req.getContactInfo()
-                )
-        );
+        // Try to update auth service, but don't fail if it errors
+        try {
+            authClient.updateUserProfile(
+                    userId,
+                    new UserProfileUpdateRequest(
+                            req.getName(),
+                            req.getContactInfo()
+                    )
+            );
+            log.info("Auth service profile updated successfully");
+        } catch (Exception e) {
+            log.warn("Failed to update auth service profile, but citizen profile saved: {}", e.getMessage());
+        }
 
-
-
-        return citizenRepository.save(citizen);
+        return saved;
     }
 
     public Citizen getProfile(Long userId) {
         return citizenRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Citizen profile not found for userId: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("Citizen profile not found. Please complete your profile.", userId));
     }
 
     public Citizen getById(Long citizenId) {
@@ -123,6 +131,11 @@ public class CitizenServiceImplementation implements CitizenService {
                 .build();
 
         return documentRepository.save(doc);
+    }
+
+    public CitizenDocument getDocumentWithBlob(Long documentId) {
+        return documentRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document", documentId));
     }
 
     @Transactional

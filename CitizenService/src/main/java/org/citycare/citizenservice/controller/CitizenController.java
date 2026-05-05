@@ -3,6 +3,7 @@ package org.citycare.citizenservice.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.citycare.citizenservice.dto.request.CitizenCreateRequest;
 import org.citycare.citizenservice.dto.request.CitizenProfileRequest;
 import org.citycare.citizenservice.dto.response.ApiResponse;
 import org.citycare.citizenservice.dto.response.CitizenDocumentResponse;
@@ -57,6 +58,21 @@ public class CitizenController {
         return citizenService.getCitizenResponseById(id);
     }
 
+    @PostMapping("/internal/create")
+    public CitizenResponse createCitizenFromRegistration(@RequestBody CitizenCreateRequest request) {
+        Citizen citizen = citizenService.createCitizenFromRegistration(
+            request.getUserId(), 
+            request.getName(), 
+            request.getContactInfo()
+        );
+        return CitizenResponse.builder()
+            .citizenId(citizen.getCitizenId())
+            .name(citizen.getName())
+            .contactInfo(citizen.getContactInfo())
+            .status(citizen.getStatus().name())
+            .build();
+    }
+
 
     @PostMapping(value = "/{id}/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<CitizenDocument>> uploadDocument(
@@ -78,6 +94,18 @@ public class CitizenController {
                         citizenService.getDocuments(id)
                 )
         );
+    }
+
+    @GetMapping("/{id}/documents/{docId}/download")
+    public ResponseEntity<byte[]> downloadDocument(
+            @PathVariable Long id,
+            @PathVariable Long docId) {
+        
+        CitizenDocument doc = citizenService.getDocumentWithBlob(docId);
+        
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(doc.getDocumentData());
     }
 
 

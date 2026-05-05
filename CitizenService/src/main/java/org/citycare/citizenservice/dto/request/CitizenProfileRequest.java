@@ -17,14 +17,12 @@ public class CitizenProfileRequest {
 
     @NotBlank(message = "Name is required")
     @Size(min = 2, max = 50, message = "Name must be between 2 and 50 characters")
-    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "Name must contain only letters and spaces")
     private String name;
 
     @Past(message = "Date of birth must be in the past")
     @JsonFormat(pattern = "dd-MM-yyyy")
     private LocalDate dateOfBirth;
 
-    // Use lowercase 'gender' in Postman, Jackson will map it to the Enum
     private Citizen.Gender gender;
 
     private String address;

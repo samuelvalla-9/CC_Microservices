@@ -14,6 +14,7 @@ public interface CitizenService {
     Citizen getById(Long citizenId);
     List<Citizen> getAll();
     CitizenDocument uploadDocument(Long citizenId, byte[] documentData);
+    CitizenDocument getDocumentWithBlob(Long documentId);
     CitizenDocumentResponse verifyDocument(Long documentId, CitizenDocument.VerificationStatus status);
     List<CitizenDocumentResponse> getDocuments(Long citizenId);
     CitizenResponse getCitizenResponseById(Long citizenId);
