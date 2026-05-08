@@ -2,9 +2,9 @@ package org.citycare.citizenservice.feign;
 
 import org.citycare.citizenservice.dto.request.UserProfileUpdateRequest;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @FeignClient(name = "AUTHSERVICE")
 public interface AuthClient {
@@ -13,4 +13,9 @@ public interface AuthClient {
     void updateUserProfile(
             @PathVariable Long id,
             @RequestBody UserProfileUpdateRequest request);
+
+    @GetMapping("/admin/users/by-role")
+    List<AdminUserResponse> getUsersByRole(@RequestParam("role") String role);
+
+    record AdminUserResponse(Long id, String name, String email, String role) {}
 }

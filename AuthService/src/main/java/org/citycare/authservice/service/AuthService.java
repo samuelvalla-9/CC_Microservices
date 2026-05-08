@@ -6,6 +6,7 @@ import org.citycare.authservice.dto.RegisterRequest;
 import org.citycare.authservice.dto.UserProfileUpdateRequest;
 import org.citycare.authservice.entity.User;
 import org.citycare.authservice.exception.EmailAlreadyRegisteredException;
+import org.citycare.authservice.exception.PhoneAlreadyRegisteredException;
 import org.citycare.authservice.exception.ResourceNotFoundException;
 import org.citycare.authservice.feign.CitizenClient;
 import org.citycare.authservice.feign.NotificationClient;
@@ -148,6 +149,16 @@ public class AuthService {
         return userRepository.findAll();
     }
 
+    public List<User> getUsersByRole(String roleStr) {
+        try {
+            User.Role role = User.Role.valueOf(roleStr.toUpperCase());
+            return userRepository.findByRoleIn(List.of(role));
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid role requested: {}", roleStr);
+            return List.of();
+        }
+    }
+
     public User getUserById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
@@ -197,6 +208,17 @@ public class AuthService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+
+        // Validate phone uniqueness if phone is being updated
+        if (request.getContactInfo() != null && !request.getContactInfo().trim().isEmpty()) {
+            // Check if phone is different from current phone
+            if (!request.getContactInfo().equals(user.getPhone())) {
+                // Check if phone already exists for another user
+                if (userRepository.existsByPhone(request.getContactInfo())) {
+                    throw new PhoneAlreadyRegisteredException(request.getContactInfo());
+                }
+            }
+        }
 
         user.setName(request.getName());
         user.setPhone(request.getContactInfo());

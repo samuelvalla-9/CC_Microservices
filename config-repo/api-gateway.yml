@@ -36,6 +36,8 @@ spring:
           uri: lb://CITIZENSERVICE
           predicates:
             - Path=/api/citizens/**
+          filters:
+            - JwtAuthFilter
 
         - id: EMERGENCYSERVICE
           uri: lb://EMERGENCYSERVICE
@@ -62,11 +64,6 @@ spring:
             - Path=/notifications/**
           filters:
             - JwtAuthFilter
-
-        - id: SPRINGADMIN
-          uri: lb://SPRING-BOOT-ADMIN
-          predicates:
-            - Path=/admin-monitor/**
 
 eureka:
   client:

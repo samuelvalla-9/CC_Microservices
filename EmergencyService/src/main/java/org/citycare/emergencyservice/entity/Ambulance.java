@@ -27,6 +27,9 @@ public class Ambulance {
 
     private String model;
 
+    @Column(name = "facility_id", nullable = false)
+    private Long facilityId;
+
     @Enumerated(EnumType.STRING) @Column(nullable = false)
     @Builder.Default private Status status = Status.AVAILABLE;
 

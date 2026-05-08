@@ -27,8 +27,6 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Swagger / actuator open
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/actuator/**").permitAll()
-                // Internal event endpoints — open for service-to-service calls (protected at gateway level)
-                .requestMatchers("/notifications/events/**").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

@@ -31,21 +31,21 @@ public class NotificationController {
     }
 
     @GetMapping("/user/{userId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() and (#userId.toString() == authentication.name or hasRole('ADMIN'))")
     public ResponseEntity<ApiResponse<List<Notification>>> getByUser(@PathVariable Long userId) {
         return ResponseEntity.ok(ApiResponse.ok("Notifications for user " + userId,
                 notificationService.getNotificationsForUser(userId)));
     }
 
     @GetMapping("/user/{userId}/unread")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() and (#userId.toString() == authentication.name or hasRole('ADMIN'))")
     public ResponseEntity<ApiResponse<List<Notification>>> getUnread(@PathVariable Long userId) {
         return ResponseEntity.ok(ApiResponse.ok("Unread notifications",
                 notificationService.getUnreadNotificationsForUser(userId)));
     }
 
     @GetMapping("/user/{userId}/unread/count")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() and (#userId.toString() == authentication.name or hasRole('ADMIN'))")
     public ResponseEntity<ApiResponse<Long>> getUnreadCount(@PathVariable Long userId) {
         return ResponseEntity.ok(ApiResponse.ok("Unread count",
                 notificationService.getUnreadCount(userId)));
@@ -58,7 +58,7 @@ public class NotificationController {
     }
 
     @PutMapping("/user/{userId}/read-all")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated() and (#userId.toString() == authentication.name or hasRole('ADMIN'))")
     public ResponseEntity<ApiResponse<Integer>> markAllRead(@PathVariable Long userId) {
         return ResponseEntity.ok(ApiResponse.ok("All marked as read",
                 notificationService.markAllAsRead(userId)));
@@ -119,5 +119,13 @@ public class NotificationController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Facility notification sent",
                         notificationService.handleFacilityEvent(event)));
+    }
+
+    @PostMapping("/events/document")
+    public ResponseEntity<ApiResponse<Notification>> documentEvent(
+            @RequestBody DocumentEventRequest event) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok("Document notification sent",
+                        notificationService.handleDocumentEvent(event)));
     }
 }

@@ -5,7 +5,7 @@ spring:
   application:
     name: EMERGENCYSERVICE
   datasource:
-    url: jdbc:mysql://localhost:3306/citycare_emergency
+    url: jdbc:mysql://localhost:3306/citycare_emergency?createDatabaseIfNotExist=true
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver

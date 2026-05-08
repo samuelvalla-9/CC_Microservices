@@ -32,5 +32,7 @@ public interface NotificationService {
 
     Notification handleFacilityEvent(FacilityEventRequest event);
 
+    Notification handleDocumentEvent(DocumentEventRequest event);
+
     void deleteNotification(Long id);
 }

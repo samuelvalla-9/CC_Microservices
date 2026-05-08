@@ -60,10 +60,16 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
                     return unauthorized(exchange, "Invalid or expired JWT token");
                 }
 
-                // Forward username as a downstream header so services can use it
+                // Extract user information from JWT
                 String username = jwtUtil.extractUsername(token);
+                String role = jwtUtil.extractRole(token);
+                Long userId = jwtUtil.extractUserId(token);
+
+                // Forward headers so services can use them
                 ServerHttpRequest mutatedRequest = request.mutate()
                         .header("X-Auth-User", username)
+                        .header("X-Auth-Role", role != null ? role : "")
+                        .header("X-Auth-UserId", userId != null ? userId.toString() : "")
                         .build();
 
                 return chain.filter(exchange.mutate().request(mutatedRequest).build());

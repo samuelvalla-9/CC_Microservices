@@ -112,6 +112,12 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok("User", authService.getUserById(id)));
     }
 
+    @GetMapping("/admin/users/by-role")
+    @Operation(summary = "[INTERNAL] Get users by role - used by other services")
+    public ResponseEntity<List<User>> getUsersByRole(@RequestParam("role") String role) {
+        return ResponseEntity.ok(authService.getUsersByRole(role));
+    }
+
     @PatchMapping("/admin/users/{id}/deactivate")
     @Operation(summary = "[ADMIN] Deactivate user account")
     public ResponseEntity<ApiResponse<User>> deactivateUser(@PathVariable Long id) {

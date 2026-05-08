@@ -13,9 +13,10 @@ public interface CitizenService {
     Citizen createOrUpdateProfile(Long userId, CitizenProfileRequest req);Citizen getProfile(Long userId);
     Citizen getById(Long citizenId);
     List<Citizen> getAll();
-    CitizenDocument uploadDocument(Long citizenId, byte[] documentData);
+    CitizenDocument uploadDocument(Long citizenId, byte[] documentData, String contentType);
     CitizenDocument getDocumentWithBlob(Long documentId);
     CitizenDocumentResponse verifyDocument(Long documentId, CitizenDocument.VerificationStatus status);
     List<CitizenDocumentResponse> getDocuments(Long citizenId);
     CitizenResponse getCitizenResponseById(Long citizenId);
+    boolean isCitizenDocumentVerified(Long citizenId);
 }

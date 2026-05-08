@@ -53,13 +53,26 @@ public class EmergencyServiceImpl implements EmergencyService{
         Long citizenId = Long.parseLong(auth.getName());
         log.info("Reporting emergency for Citizen ID: {}", citizenId);
 
-        // 2. Validate Citizen (Optional but good for data integrity)
+        // 2. Validate Citizen and check document verification
         try {
             CitizenResponse citizen = citizenClient.getById(citizenId);
             log.info("Validated citizen: {} (id={})", citizen.getName(), citizen.getCitizenId());
         } catch (Exception e) {
-            // Feign 404 vaste kachitanga user ledu ani ardham
-            log.warn("Citizen validation skipped or failed for ID {}: {}", citizenId, e.getMessage());
+            log.warn("Citizen validation failed for ID {}: {}", citizenId, e.getMessage());
+            throw new BadRequestException("Citizen profile not found. Cannot report emergency.");
+        }
+
+        // 3. Verify citizen has at least one verified document (server-side enforcement)
+        try {
+            boolean verified = citizenClient.isCitizenVerified(citizenId);
+            if (!verified) {
+                throw new BadRequestException("Document verification required before reporting emergencies. Please upload and get your documents verified.");
+            }
+        } catch (BadRequestException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("Document verification check failed for citizen {}: {}", citizenId, e.getMessage());
+            throw new BadRequestException("Unable to verify document status. Please try again later.");
         }
 
         // 3. Create Emergency with the extracted citizenId
@@ -144,6 +157,11 @@ public class EmergencyServiceImpl implements EmergencyService{
     }
 
     @Override
+    public List<Emergency> getAllEmergencies() {
+        return emergencyRepository.findAll();
+    }
+
+    @Override
     public List<Emergency> getMyCases(Long citizenId) {
         return emergencyRepository.findByCitizenId(citizenId);
     }
@@ -171,6 +189,7 @@ public class EmergencyServiceImpl implements EmergencyService{
         return ambulanceRepository.save(Ambulance.builder()
                 .vehicleNumber(req.getVehicleNumber())
                 .model(req.getModel())
+                .facilityId(req.getFacilityId())
                 .status(Ambulance.Status.AVAILABLE)
                 .build());
     }
@@ -187,6 +206,17 @@ public class EmergencyServiceImpl implements EmergencyService{
                 .orElseThrow(() -> new ResourceNotFoundException("Ambulance", id));
         amb.setStatus(status);
         return ambulanceRepository.save(amb);
+    }
+
+    @Override
+    @Transactional
+    public void deleteAmbulance(Long id) {
+        Ambulance amb = ambulanceRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Ambulance", id));
+        if (amb.getStatus() == Ambulance.Status.DISPATCHED) {
+            throw new IllegalStateException("Cannot delete an ambulance that is currently dispatched");
+        }
+        ambulanceRepository.delete(amb);
     }
 
 

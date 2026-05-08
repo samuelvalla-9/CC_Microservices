@@ -12,7 +12,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users", uniqueConstraints = @UniqueConstraint(columnNames = "email"))
+@Table(name = "users", uniqueConstraints = {
+    @UniqueConstraint(columnNames = "email"),
+    @UniqueConstraint(columnNames = "phone")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -51,6 +54,7 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
+    @Column(unique = true)
     private String phone;
 
     @Enumerated(EnumType.STRING)

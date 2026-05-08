@@ -11,6 +11,9 @@ public interface CitizenClient {
     @GetMapping("/citizens/{id}")
     CitizenResponse getById(@PathVariable("id") Long citizenId);
 
+    @GetMapping("/citizens/internal/{id}/verified")
+    boolean isCitizenVerified(@PathVariable("id") Long citizenId);
+
     @GetMapping("/citizens/user/{userId}")
     CitizenResponse getCitizenByUserId(@PathVariable("userId") Long userId);
 }

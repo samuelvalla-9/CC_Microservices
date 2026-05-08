@@ -33,19 +33,19 @@ public class PatientTreatmentController {
     }
 
     @GetMapping("/patients")
-    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'NURSE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'NURSE', 'COMPLIANCE_OFFICER')")
     public ResponseEntity<ApiResponse<List<Patient>>> getAll() {
         return ResponseEntity.ok(ApiResponse.ok("All patients", service.getAllPatients()));
     }
 
     @GetMapping("/patients/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'NURSE')")
+    @PreAuthorize("@patientSecurity.canAccessPatient(authentication, #id)")
     public ResponseEntity<ApiResponse<Patient>> getById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok("Patient", service.getPatientById(id)));
     }
 
     @PatchMapping("/patients/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR')") // Usually Admin or Doctor changes patient status
+    @PreAuthorize("@patientSecurity.canAccessPatient(authentication, #id)")
     public ResponseEntity<ApiResponse<Patient>> updateStatus(
             @PathVariable Long id, @RequestParam Patient.Status status) {
         return ResponseEntity.ok(ApiResponse.ok("Status updated to " + status,
@@ -90,7 +90,7 @@ public class PatientTreatmentController {
     }
 
     @GetMapping("/patients/{id}/treatments")
-    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'NURSE')")
+    @PreAuthorize("@patientSecurity.canAccessPatient(authentication, #id)")
     public ResponseEntity<ApiResponse<List<Treatment>>> getByPatient(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok("Treatments for patient " + id,
                 service.getTreatmentsByPatient(id)));

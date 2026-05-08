@@ -28,7 +28,7 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/actuator/**").permitAll()
-                        .requestMatchers("/staff/**").permitAll()
+                        // Remove: .requestMatchers("/staff/**").permitAll() - Let @PreAuthorize handle it
                         // Require authentication for everything else
                         .anyRequest().authenticated()
                 )

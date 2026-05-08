@@ -7,5 +7,6 @@ import java.util.List;
 
 public interface CitizenDocumentRepository extends JpaRepository<CitizenDocument, Long> {
     List<CitizenDocument> findByCitizenCitizenId(Long citizenId);
+    boolean existsByCitizenCitizenIdAndVerificationStatus(Long citizenId, CitizenDocument.VerificationStatus status);
 }
 

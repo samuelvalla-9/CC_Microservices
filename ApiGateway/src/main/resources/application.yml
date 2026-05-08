@@ -40,6 +40,8 @@ spring:
           uri: lb://CITIZENSERVICE
           predicates:
             - Path=/api/citizens/**
+          filters:
+            - JwtAuthFilter
         - id: NOTIFICATIONSERVICE
           uri: lb://NOTIFICATIONSERVICE
           predicates:

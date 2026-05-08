@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.citycare.notificationservice.dto.request.*;
 import org.citycare.notificationservice.entity.Notification;
+import org.citycare.notificationservice.feign.AuthClient;
 import org.citycare.notificationservice.repository.NotificationRepository;
 import org.citycare.notificationservice.service.EmailService;
 import org.citycare.notificationservice.service.NotificationService;
@@ -19,6 +20,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final EmailService emailService;
+    private final AuthClient authClient;
 
     @Override
     @Transactional
@@ -99,6 +101,56 @@ public class NotificationServiceImpl implements NotificationService {
                 message = String.format(
                         "An ambulance has been dispatched for Emergency #%d. Please stay at your location: %s.",
                         event.getEmergencyId(), event.getLocation());
+                
+                // Notify citizen
+                Notification citizenNotif = Notification.builder()
+                        .userId(event.getCitizenId())
+                        .entityId(event.getEmergencyId())
+                        .title(title)
+                        .message(message)
+                        .category(Notification.Category.EMERGENCY)
+                        .recipientEmail(event.getRecipientEmail())
+                        .channel(Notification.Channel.IN_APP)
+                        .status(Notification.NotificationStatus.UNREAD)
+                        .build();
+                notificationRepository.save(citizenNotif);
+                
+                if (event.getRecipientEmail() != null) {
+                    emailService.sendEmail(event.getRecipientEmail(), title, message);
+                }
+                
+                // Notify all admins
+                try {
+                    List<AuthClient.UserResponse> admins = authClient.getUsersByRole("ADMIN");
+                    String adminTitle = "🚨 Patient Awaiting Admission";
+                    String adminMessage = String.format(
+                            "Emergency #%d has been dispatched. Patient awaiting admission at location: %s. Type: %s",
+                            event.getEmergencyId(), event.getLocation(), event.getType());
+                    
+                    for (AuthClient.UserResponse admin : admins) {
+                        Notification adminNotif = Notification.builder()
+                                .userId(admin.id())
+                                .entityId(event.getEmergencyId())
+                                .title(adminTitle)
+                                .message(adminMessage)
+                                .category(Notification.Category.EMERGENCY)
+                                .recipientEmail(admin.email())
+                                .channel(Notification.Channel.IN_APP)
+                                .status(Notification.NotificationStatus.UNREAD)
+                                .build();
+                        notificationRepository.save(adminNotif);
+                        
+                        if (admin.email() != null) {
+                            emailService.sendEmail(admin.email(), adminTitle, adminMessage);
+                        }
+                    }
+                    log.info("Notified {} admin(s) about dispatched emergency #{}", admins.size(), event.getEmergencyId());
+                } catch (Exception e) {
+                    log.error("Failed to notify admins about dispatched emergency: {}", e.getMessage());
+                }
+                
+                log.info("Emergency notification created for citizen {} | event: {}", event.getCitizenId(), event.getEventType());
+                return citizenNotif;
             }
             case "STATUS_CHANGED" -> {
                 title = "📋 Emergency Status Updated";
@@ -363,6 +415,44 @@ public class NotificationServiceImpl implements NotificationService {
 
         log.info("Facility notification created | event: {}", event.getEventType());
         return saved;
+    }
+
+    @Override
+    @Transactional
+    public Notification handleDocumentEvent(DocumentEventRequest event) {
+        String title = "Document Verification Required";
+        String message = String.format(
+                "New document uploaded by %s (Citizen #%d) awaiting verification.",
+                event.getCitizenName(), event.getCitizenId());
+
+        Notification firstSaved = null;
+
+        try {
+            List<AuthClient.UserResponse> admins = authClient.getUsersByRole("ADMIN");
+            for (AuthClient.UserResponse admin : admins) {
+                Notification notif = Notification.builder()
+                        .userId(admin.id())
+                        .entityId(event.getDocumentId())
+                        .title(title)
+                        .message(message)
+                        .category(Notification.Category.COMPLIANCE)
+                        .recipientEmail(admin.email())
+                        .channel(Notification.Channel.IN_APP)
+                        .status(Notification.NotificationStatus.UNREAD)
+                        .build();
+                Notification saved = notificationRepository.save(notif);
+                if (firstSaved == null) firstSaved = saved;
+
+                if (admin.email() != null) {
+                    emailService.sendEmail(admin.email(), title, message);
+                }
+            }
+            log.info("Document event: notified {} admin(s) for citizen #{}", admins.size(), event.getCitizenId());
+        } catch (Exception e) {
+            log.warn("Failed to resolve admins for document event: {}", e.getMessage());
+        }
+
+        return firstSaved;
     }
 
     @Override

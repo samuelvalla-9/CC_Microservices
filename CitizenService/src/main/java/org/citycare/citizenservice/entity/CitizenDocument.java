@@ -26,6 +26,8 @@ public class CitizenDocument extends BaseEntity{
     @Column(nullable = false, columnDefinition = "MEDIUMBLOB")
     private byte[] documentData;
 
+    private String contentType;
+
     private LocalDate uploadedDate;
 
     @Enumerated(EnumType.STRING)

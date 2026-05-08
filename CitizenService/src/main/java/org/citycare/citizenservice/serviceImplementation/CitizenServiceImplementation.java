@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.citycare.citizenservice.exception.ResourceNotFoundException;
 import org.citycare.citizenservice.feign.AuthClient;
+import org.citycare.citizenservice.feign.NotificationClient;
 import org.citycare.citizenservice.repository.CitizenDocumentRepository;
 import org.citycare.citizenservice.repository.CitizenRepository;
 import org.citycare.citizenservice.service.CitizenService;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -28,6 +30,7 @@ public class CitizenServiceImplementation implements CitizenService {
     private final CitizenRepository citizenRepository;
     private final CitizenDocumentRepository documentRepository;
     private final AuthClient authClient;
+    private final NotificationClient notificationClient;
 
     // ── Called by auth-service via OpenFeign on citizen registration ──────────
 
@@ -62,11 +65,24 @@ public class CitizenServiceImplementation implements CitizenService {
                 .orElse(new Citizen());
 
         citizen.setCitizenId(userId);
-        citizen.setName(req.getName());
-        citizen.setDateOfBirth(req.getDateOfBirth());
-        citizen.setGender(req.getGender());
-        citizen.setAddress(req.getAddress());
-        citizen.setContactInfo(req.getContactInfo());
+        
+        // Only update fields if they are provided (not null)
+        if (req.getName() != null && !req.getName().isEmpty()) {
+            citizen.setName(req.getName());
+        }
+        if (req.getDateOfBirth() != null) {
+            citizen.setDateOfBirth(req.getDateOfBirth());
+        }
+        if (req.getGender() != null) {
+            citizen.setGender(req.getGender());
+        }
+        if (req.getAddress() != null && !req.getAddress().isEmpty()) {
+            citizen.setAddress(req.getAddress());
+        }
+        if (req.getContactInfo() != null && !req.getContactInfo().isEmpty()) {
+            citizen.setContactInfo(req.getContactInfo());
+        }
+        
         citizen.setStatus(Citizen.Status.ACTIVE);
 
         // Save citizen first
@@ -75,14 +91,16 @@ public class CitizenServiceImplementation implements CitizenService {
 
         // Try to update auth service, but don't fail if it errors
         try {
-            authClient.updateUserProfile(
-                    userId,
-                    new UserProfileUpdateRequest(
-                            req.getName(),
-                            req.getContactInfo()
-                    )
-            );
-            log.info("Auth service profile updated successfully");
+            if (req.getName() != null || req.getContactInfo() != null) {
+                authClient.updateUserProfile(
+                        userId,
+                        new UserProfileUpdateRequest(
+                                req.getName() != null ? req.getName() : saved.getName(),
+                                req.getContactInfo() != null ? req.getContactInfo() : saved.getContactInfo()
+                        )
+                );
+                log.info("Auth service profile updated successfully");
+            }
         } catch (Exception e) {
             log.warn("Failed to update auth service profile, but citizen profile saved: {}", e.getMessage());
         }
@@ -119,18 +137,34 @@ public class CitizenServiceImplementation implements CitizenService {
     }
 
     @Transactional
-    public CitizenDocument uploadDocument(Long citizenId, byte[] documentData) {
+    public CitizenDocument uploadDocument(Long citizenId, byte[] documentData, String contentType) {
         Citizen citizen = citizenRepository.findById(citizenId)
                 .orElseThrow(() -> new ResourceNotFoundException("Citizen", citizenId));
 
         CitizenDocument doc = CitizenDocument.builder()
                 .citizen(citizen)
                 .documentData(documentData)
+                .contentType(contentType)
                 .uploadedDate(LocalDate.now())
                 .verificationStatus(CitizenDocument.VerificationStatus.PENDING)
                 .build();
 
-        return documentRepository.save(doc);
+        CitizenDocument saved = documentRepository.save(doc);
+
+        // Notify admins via NotificationService event endpoint (it resolves admin users internally)
+        try {
+            notificationClient.documentEvent(Map.of(
+                    "documentId", saved.getDocumentId(),
+                    "citizenId", citizenId,
+                    "citizenName", citizen.getName(),
+                    "eventType", "DOCUMENT_UPLOADED"
+            ));
+            log.info("Sent document upload event for citizen #{}", citizenId);
+        } catch (Exception e) {
+            log.warn("Failed to send document upload event: {}", e.getMessage());
+        }
+
+        return saved;
     }
 
     public CitizenDocument getDocumentWithBlob(Long documentId) {
@@ -146,6 +180,25 @@ public class CitizenServiceImplementation implements CitizenService {
                 .orElseThrow(() -> new ResourceNotFoundException("Document", documentId));
 
         doc.setVerificationStatus(status);
+
+        // Notify the citizen about their document verification result
+        try {
+            Long citizenId = doc.getCitizen().getCitizenId();
+            String statusMessage = status == CitizenDocument.VerificationStatus.VERIFIED
+                    ? "Your document has been verified. You can now report emergencies."
+                    : "Your document has been rejected. Please upload a valid document to report emergencies.";
+
+            notificationClient.createNotification(Map.of(
+                    "userId", citizenId,
+                    "entityId", doc.getDocumentId(),
+                    "title", "Document " + status.name(),
+                    "message", statusMessage,
+                    "category", "EMERGENCY"
+            ));
+            log.info("Notified citizen #{} about document {} status: {}", citizenId, documentId, status);
+        } catch (Exception e) {
+            log.warn("Failed to notify citizen about document verification: {}", e.getMessage());
+        }
 
         return CitizenDocumentResponse.builder()
                 .documentId(doc.getDocumentId())
@@ -166,5 +219,11 @@ public class CitizenServiceImplementation implements CitizenService {
                         .uploadedDate(doc.getUploadedDate())
                         .build())
                 .toList();
+    }
+
+    @Override
+    public boolean isCitizenDocumentVerified(Long citizenId) {
+        return documentRepository.existsByCitizenCitizenIdAndVerificationStatus(
+                citizenId, CitizenDocument.VerificationStatus.VERIFIED);
     }
 }

@@ -23,4 +23,9 @@ public class CitizenClientFallback implements CitizenClient {
         fallback.setStatus("UNKNOWN");
         return fallback;
     }
+
+    @Override
+    public boolean isCitizenVerified(Long citizenId) {
+        return false; // fail-safe: deny if citizen-service is unavailable
+    }
 }

@@ -138,7 +138,12 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
             throw new BadRequestException("Patient already discharged! Cannot update status anymore.");
         }
 
-        // 3. Update Local Patient Status
+        // 3. Business Logic: Only STABLE patients can be discharged
+        if (status == Patient.Status.DISCHARGED && patient.getStatus() != Patient.Status.STABLE) {
+            throw new BadRequestException("Cannot discharge patient. Patient status must be STABLE before discharge. Current status: " + patient.getStatus());
+        }
+
+        // 4. Update Local Patient Status
         patient.setStatus(status);
         if (status == Patient.Status.DISCHARGED) {
             patient.setDischargeDate(LocalDate.now());

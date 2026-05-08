@@ -5,10 +5,11 @@ management:
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: "health,info"
+        exclude: "env,beans,threaddump,heapdump,configprops,env-toml,logfile"
   endpoint:
     health:
-      show-details: always
+      show-details: when-authorized
 
 logging:
   level:

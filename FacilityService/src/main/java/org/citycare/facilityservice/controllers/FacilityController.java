@@ -30,7 +30,7 @@ public class FacilityController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER', 'COMPLIANCE_OFFICER')")
     public ResponseEntity<ApiResponse<List<FacilityResponse>>> getAll() {
         List<FacilityResponse> data = facilityService.getAll();
         return ResponseEntity.ok(ApiResponse.ok("All facilities retrieved", data));

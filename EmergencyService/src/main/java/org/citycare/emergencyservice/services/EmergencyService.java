@@ -14,6 +14,7 @@ public interface EmergencyService {
     // Emergency Reporting & Tracking
     Emergency reportEmergency(EmergencyRequest req);
     Emergency getById(Long id);
+    List<Emergency> getAllEmergencies();
     List<Emergency> getMyCases(Long citizenId);
     List<Emergency> getReportedEmergencies();
     List<Emergency> getDispatchedEmergencies();
@@ -28,6 +29,7 @@ public interface EmergencyService {
     List<Ambulance> getAllAmbulances();
     List<Ambulance> getAvailableAmbulances();
     Ambulance updateAmbulanceStatus(Long id, Ambulance.Status status);
+    void deleteAmbulance(Long id);
 
 
     //treatement

@@ -120,7 +120,7 @@ class CitizenServiceImplementationTest {
     void uploadDocument_citizenNotFound_throwsResourceNotFoundException() {
         when(citizenRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> citizenService.uploadDocument(99L, new byte[]{1, 2, 3}))
+        assertThatThrownBy(() -> citizenService.uploadDocument(99L, new byte[]{1, 2, 3}, "image/png"))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -135,7 +135,7 @@ class CitizenServiceImplementationTest {
         when(citizenRepository.findById(1L)).thenReturn(Optional.of(mockCitizen));
         when(documentRepository.save(any())).thenReturn(doc);
 
-        CitizenDocument result = citizenService.uploadDocument(1L, new byte[]{1, 2, 3});
+        CitizenDocument result = citizenService.uploadDocument(1L, new byte[]{1, 2, 3}, "image/png");
 
         assertThat(result.getVerificationStatus()).isEqualTo(CitizenDocument.VerificationStatus.PENDING);
     }

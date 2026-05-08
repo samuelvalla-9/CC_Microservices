@@ -37,6 +37,12 @@ public class EmergencyController {
                 .body(ApiResponse.ok("Emergency reported. Help is on the way.",
                         emergencyService.reportEmergency(request)));
     }
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'COMPLIANCE_OFFICER')")
+    public ResponseEntity<ApiResponse<List<Emergency>>> getAllEmergencies() {
+        return ResponseEntity.ok(ApiResponse.ok("All emergencies", emergencyService.getAllEmergencies()));
+    }
+
     @GetMapping("/my")
     @PreAuthorize("hasRole('CITIZEN')")
     public ResponseEntity<ApiResponse<List<Emergency>>> myEmergencies() {
@@ -115,6 +121,13 @@ public class EmergencyController {
             @PathVariable Long id, @RequestParam Ambulance.Status status) {
         return ResponseEntity.ok(ApiResponse.ok("Status updated to " + status,
                 emergencyService.updateAmbulanceStatus(id, status)));
+    }
+
+    @DeleteMapping("/admin/ambulances/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<String>> deleteAmbulance(@PathVariable Long id) {
+        emergencyService.deleteAmbulance(id);
+        return ResponseEntity.ok(ApiResponse.ok("Ambulance deleted successfully", null));
     }
 
     @GetMapping("/internal/{id}")
