@@ -13,14 +13,11 @@ import java.util.Date;
 @Component
 public class JwtProvider {
 
-    @Value("${jwt.secret:Y2Y4ZTM1YmYtYjYyMC00ZDllLTlhZTMtZDY2ZDU4ZTMxZmE5Cg==}")
+    @Value("${jwt.secret}")
     private String secret;
 
     public Claims getClaims(String token) {
-        // 1. Create the Key
         SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64URL.decode(secret));
-
-        // 2. Use parserBuilder() - This is the standard for 0.12.x
         return Jwts.parser()
                 .verifyWith(key)
                 .build()

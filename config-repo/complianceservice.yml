@@ -40,3 +40,5 @@ logging:
     org.citycare.complianceservice: DEBUG
     org.springframework.web: INFO
 
+jwt:
+  secret: "your-very-secure-secret"

@@ -33,6 +33,13 @@ public class Patient {
     @Column(nullable = false, unique = true)
     private Long emergencyId;
 
+    @Column(name = "facility_id")
+    private Long facilityId;
+
+    /** staffId from facility-service — set when staff first adds a treatment */
+    @Column(name = "assigned_staff_id")
+    private Long assignedStaffId;
+
     @Column(nullable = false)
     private LocalDate admissionDate;
 

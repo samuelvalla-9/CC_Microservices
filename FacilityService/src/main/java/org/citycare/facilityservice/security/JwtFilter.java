@@ -34,22 +34,24 @@ public class JwtFilter extends OncePerRequestFilter {
             try {
                 Claims claims = jwtProvider.getClaims(token);
 
-                if (!jwtProvider.isTokenExpired(claims) && claims.getSubject() != null) {
+                if (!jwtProvider.isTokenExpired(claims)) {
 
                     String role = claims.get("role", String.class);
+                    Object userIdObj = claims.get("userId");
 
                     // Safety check: only authenticate if a role exists
-                    if (role != null) {
+                    if (role != null && userIdObj != null) {
                         String authority = "ROLE_" + role.toUpperCase();
+                        String userId = String.valueOf(userIdObj);
 
                         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                                claims.getSubject(),
+                                userId,
                                 null,
                                 List.of(new SimpleGrantedAuthority(authority))
                         );
 
                         SecurityContextHolder.getContext().setAuthentication(auth);
-                        // log.info("Authenticated user: {} with role: {}", claims.getSubject(), authority);
+                        // log.info("Authenticated userId: {} with role: {}", userId, authority);
                     }
                 }
             } catch (Exception e) {

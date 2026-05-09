@@ -4,9 +4,9 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-@FeignClient(name = "facility-service", fallback = FacilityClientFallback.class)
+@FeignClient(name = "FACILITYSERVICE", fallback = FacilityClientFallback.class)
 public interface FacilityClient {
 
-    @GetMapping("/api/facilities/{id}")
+    @GetMapping("/facilities/{id}")
     FacilityResponse getFacilityById(@PathVariable("id") Long facilityId);
 }

@@ -31,6 +31,8 @@ spring:
           uri: lb://COMPLIANCESERVICE
           predicates:
             - Path=/compliance/**
+          filters:
+            - JwtAuthFilter
 
         - id: CITIZENSERVICE
           uri: lb://CITIZENSERVICE

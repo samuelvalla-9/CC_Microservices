@@ -18,6 +18,7 @@ public class AdmitPatientRequest {
     @Positive(message = "Patient ID must be a valid positive number")
     @Min(value = 1, message = "emergency id  should be greater than 0")
     private Long emergencyId;
+    private Long facilityId;
     private String ward;
     private String notes;
 }

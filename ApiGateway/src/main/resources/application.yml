@@ -28,14 +28,20 @@ spring:
           uri: lb://FACILITYSERVICE
           predicates:
             - Path=/facilities/**, /staff/**
+          filters:
+            - JwtAuthFilter
         - id: EMERGENCYSERVICE
           uri: lb://EMERGENCYSERVICE
           predicates:
             - Path=/emergencies/**
+          filters:
+            - JwtAuthFilter
         - id: PATIENTTREATMENTSERVICE
           uri: lb://PATIENTTREATMENTSERVICE
           predicates:
             - Path=/patients/**, /treatments/**
+          filters:
+            - JwtAuthFilter
         - id: CITIZENSERVICE
           uri: lb://CITIZENSERVICE
           predicates:
@@ -46,10 +52,14 @@ spring:
           uri: lb://NOTIFICATIONSERVICE
           predicates:
             - Path=/notifications/**
+          filters:
+            - JwtAuthFilter
         - id: COMPLIANCESERVICE
           uri: lb://COMPLIANCESERVICE
           predicates:
             - Path=/compliance/**
+          filters:
+            - JwtAuthFilter
 
 eureka:
   client:

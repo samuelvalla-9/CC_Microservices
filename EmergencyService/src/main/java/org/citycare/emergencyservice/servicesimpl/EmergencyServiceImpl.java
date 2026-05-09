@@ -50,12 +50,14 @@ public class EmergencyServiceImpl implements EmergencyService{
         }
 
         // JwtFilter lo userId ni principal ga pettam kabatti ikkada direct ga parse cheyochu
+        // In this system citizenId == userId (citizen profile PK is set to userId on registration)
         Long citizenId = Long.parseLong(auth.getName());
         log.info("Reporting emergency for Citizen ID: {}", citizenId);
 
-        // 2. Validate Citizen and check document verification
+        // 2. Validate Citizen exists
+        CitizenResponse citizen;
         try {
-            CitizenResponse citizen = citizenClient.getById(citizenId);
+            citizen = citizenClient.getById(citizenId);
             log.info("Validated citizen: {} (id={})", citizen.getName(), citizen.getCitizenId());
         } catch (Exception e) {
             log.warn("Citizen validation failed for ID {}: {}", citizenId, e.getMessage());
@@ -86,8 +88,7 @@ public class EmergencyServiceImpl implements EmergencyService{
 
         Emergency saved = emergencyRepository.save(emergency);
         try {
-            String email = null;
-            try { email = citizenClient.getById(citizenId).getContactInfo(); } catch (Exception ignored) {}
+            String email = citizen.getContactInfo();
             notificationClient.sendEmergencyEvent(new NotificationClient.EmergencyEventPayload(
                 saved.getEmergencyId(), saved.getCitizenId(), saved.getType().name(),
                 saved.getLocation(), null, "REPORTED", null, email

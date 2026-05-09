@@ -5,9 +5,9 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-@FeignClient(name = "emergency-service", fallback = EmergencyClientFallback.class)
+@FeignClient(name = "EMERGENCYSERVICE", fallback = EmergencyClientFallback.class)
 public interface EmergencyClient {
 
-    @GetMapping("/api/emergencies/{id}")
+    @GetMapping("/emergencies/{id}")
     EmergencyResponse getEmergencyById(@PathVariable("id") Long emergencyId);
 }

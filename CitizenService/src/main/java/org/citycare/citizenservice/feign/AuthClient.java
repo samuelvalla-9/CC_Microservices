@@ -9,7 +9,7 @@ import java.util.List;
 @FeignClient(name = "AUTHSERVICE")
 public interface AuthClient {
 
-    @PutMapping("/api/users/{id}/profile")
+    @PutMapping("/users/{id}/profile")
     void updateUserProfile(
             @PathVariable Long id,
             @RequestBody UserProfileUpdateRequest request);

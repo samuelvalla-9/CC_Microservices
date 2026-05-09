@@ -22,4 +22,8 @@ public interface PatientTreatmentInterface {
 //    CitizenResponse getCitizenForPatient(Long patientId);
     EmergencyResponse getEmergencyForPatient(Long patientId);
     List<TreatmentSummaryResponse> getTreatmentsByDoctorId(Long doctorId);
+    List<Patient> getUnassignedPatients();
+    List<Patient> getUnassignedPatientsByFacility(Long facilityId);
+    List<Patient> getPatientsByDoctor(Long doctorId);
+    List<Patient> getPatientsByFacilityAndDoctor(Long facilityId, Long doctorId);
 }

@@ -7,7 +7,6 @@ import org.citycare.emergencyservice.dto.request.EmergencyRequest;
 import org.citycare.emergencyservice.dto.response.EmergencyResponse;
 import org.citycare.emergencyservice.entity.Ambulance;
 import org.citycare.emergencyservice.entity.Emergency;
-import org.citycare.emergencyservice.feign.dto.CitizenResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.citycare.emergencyservice.services.EmergencyService;
@@ -17,6 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -68,7 +68,13 @@ public class EmergencyController {
     public ResponseEntity<ApiResponse<Emergency>> dispatch(
             @PathVariable Long id,
             @Valid @RequestBody DispatchRequest request,
-            @RequestHeader("X-Auth-UserId") Long dispatcherId) {
+            Authentication authentication) {
+        Long dispatcherId;
+        try {
+            dispatcherId = Long.parseLong(authentication.getName());
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid authenticated user");
+        }
         return ResponseEntity.ok(ApiResponse.ok("Ambulance dispatched",
                 emergencyService.dispatchAmbulance(id, dispatcherId, request)));
     }
@@ -131,7 +137,7 @@ public class EmergencyController {
     }
 
     @GetMapping("/internal/{id}")
-    @PreAuthorize("permitAll()")
+    @PreAuthorize("isAuthenticated()")
     public EmergencyResponse getByIdInternal(@PathVariable Long id) {
         return emergencyService.getEmergencyResponseById(id);
     }

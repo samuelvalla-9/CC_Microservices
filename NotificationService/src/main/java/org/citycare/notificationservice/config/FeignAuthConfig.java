@@ -20,7 +20,7 @@ import java.util.Date;
 @Configuration
 public class FeignAuthConfig {
 
-    @Value("${jwt.secret:Y2Y4ZTM1YmYtYjYyMC00ZDllLTlhZTMtZDY2ZDU4ZTMxZmE5Cg==}")
+    @Value("${jwt.secret}")
     private String secretKey;
 
     @Bean

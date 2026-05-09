@@ -12,7 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -26,10 +28,11 @@ public class ComplianceController {
     // ── Compliance Records ────────────────────────────────────────────────────
 
     @PostMapping("/records")
-    @PreAuthorize("hasRole('COMPLIANCE_OFFICER') and #officerId.toString() == authentication.name")
+    @PreAuthorize("hasRole('COMPLIANCE_OFFICER')")
     public ResponseEntity<ApiResponse<ComplianceRecord>> createRecord(
             @Valid @RequestBody ComplianceRecordRequest request,
-            @RequestHeader("X-Auth-UserId") Long officerId) {
+            Authentication authentication) {
+        Long officerId = getAuthenticatedUserId(authentication);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Compliance record created",
                         complianceServiceImpl.createRecord(officerId, request)));
@@ -65,12 +68,21 @@ public class ComplianceController {
     // ── Audits ────────────────────────────────────────────────────────────────
 
     @PostMapping("/audits")
-    @PreAuthorize("hasRole('COMPLIANCE_OFFICER') and #officerId.toString() == authentication.name")
+    @PreAuthorize("hasRole('COMPLIANCE_OFFICER')")
     public ResponseEntity<ApiResponse<Audit>> createAudit(
             @Valid @RequestBody AuditRequest request,
-            @RequestHeader("X-Auth-UserId") Long officerId) {
+            Authentication authentication) {
+        Long officerId = getAuthenticatedUserId(authentication);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Audit created", complianceServiceImpl.createAudit(officerId, request)));
+    }
+
+    private Long getAuthenticatedUserId(Authentication authentication) {
+        try {
+            return Long.parseLong(authentication.getName());
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid authenticated user");
+        }
     }
 
     @GetMapping("/audits")

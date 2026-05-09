@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -35,8 +36,8 @@ public class CitizenController {
     @PutMapping("/profile")
     @PreAuthorize("hasAnyRole('CITIZEN', 'ADMIN')")
     public ResponseEntity<ApiResponse<Citizen>> updateProfile(
-            @Valid @RequestBody CitizenProfileRequest request,
-            @RequestHeader("X-Auth-UserId") Long userId) {
+            @Valid @RequestBody CitizenProfileRequest request) {
+        Long userId = getAuthenticatedUserId();
         // User can only update their own profile (admins can update anyone's via admin endpoint)
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Profile saved", citizenService.createOrUpdateProfile(userId, request)));
@@ -44,8 +45,8 @@ public class CitizenController {
 
     @GetMapping("/profile")
     @PreAuthorize("hasAnyRole('CITIZEN', 'ADMIN')")
-    public ResponseEntity<ApiResponse<Citizen>> getMyProfile(
-            @RequestHeader("X-Auth-UserId") Long userId) {
+    public ResponseEntity<ApiResponse<Citizen>> getMyProfile() {
+        Long userId = getAuthenticatedUserId();
         return ResponseEntity.ok(ApiResponse.ok("Citizen profile", citizenService.getProfile(userId)));
     }
 
@@ -69,8 +70,8 @@ public class CitizenController {
     @PreAuthorize("hasAnyRole('CITIZEN', 'ADMIN')")
     public ResponseEntity<ApiResponse<CitizenDocument>> uploadDocument(
             @PathVariable Long id,
-            @RequestParam("file") MultipartFile file,
-            @RequestHeader("X-Auth-UserId") Long userId) throws IOException {
+            @RequestParam("file") MultipartFile file) throws IOException {
+        Long userId = getAuthenticatedUserId();
         // Verify user is uploading for themselves or is admin
         if (!id.equals(userId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -84,8 +85,8 @@ public class CitizenController {
     @GetMapping("/{id}/documents")
     @PreAuthorize("hasAnyRole('CITIZEN', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<CitizenDocumentResponse>>> getDocuments(
-            @PathVariable Long id,
-            @RequestHeader("X-Auth-UserId") Long userId) {
+            @PathVariable Long id) {
+        Long userId = getAuthenticatedUserId();
         // Verify user can access these documents (admins can access any)
         if (!id.equals(userId) && !isAdmin()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -103,8 +104,8 @@ public class CitizenController {
     @PreAuthorize("hasAnyRole('CITIZEN', 'ADMIN')")
     public ResponseEntity<byte[]> downloadDocument(
             @PathVariable Long id,
-            @PathVariable Long docId,
-            @RequestHeader("X-Auth-UserId") Long userId) {
+            @PathVariable Long docId) {
+        Long userId = getAuthenticatedUserId();
 
         // Verify user can download this document (admins can access any)
         if (!id.equals(userId) && !isAdmin()) {
@@ -142,11 +143,13 @@ public class CitizenController {
     // ── INTERNAL ENDPOINTS (for inter-service Feign calls) ────────────────────
 
     @GetMapping("/internal/{id}")
+    @PreAuthorize("isAuthenticated()")
     public CitizenResponse getByIdInternal(@PathVariable Long id) {
         return citizenService.getCitizenResponseById(id);
     }
 
     @GetMapping("/internal/{id}/verified")
+    @PreAuthorize("isAuthenticated()")
     public boolean isCitizenVerified(@PathVariable Long id) {
         return citizenService.isCitizenDocumentVerified(id);
     }
@@ -170,6 +173,14 @@ public class CitizenController {
         return SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(role -> role.equals("ROLE_ADMIN"));
+    }
+
+    private Long getAuthenticatedUserId() {
+        try {
+            return Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid authenticated user");
+        }
     }
 
 }

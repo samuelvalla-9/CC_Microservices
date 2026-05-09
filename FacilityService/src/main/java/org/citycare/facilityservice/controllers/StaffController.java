@@ -7,12 +7,42 @@ import org.citycare.facilityservice.dto.response.StaffResponse;
 import org.citycare.facilityservice.dto.response.ApiResponse;
 import org.citycare.facilityservice.entities.Staff;
 import org.citycare.facilityservice.services.StaffService;
+
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
+import org.citycare.facilityservice.exceptions.ResourceNotFoundException;
 import java.util.List;
+// --- Exception Handling for Validation and Not Found ---
+@RestControllerAdvice
+class StaffControllerAdvice {
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<String>> handleValidation(MethodArgumentNotValidException ex) {
+        String msg = ex.getBindingResult().getFieldErrors().stream()
+                .map(e -> e.getField() + ": " + e.getDefaultMessage())
+                .findFirst().orElse("Validation error");
+        return ResponseEntity.badRequest().body(ApiResponse.error(msg));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiResponse<String>> handleNotFound(ResourceNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<String>> handleIllegalArg(IllegalArgumentException ex) {
+        return ResponseEntity.badRequest().body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<String>> handleOther(Exception ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error("Internal error: " + ex.getMessage()));
+    }
+}
 
 @RestController
 @RequestMapping("/staff")

@@ -21,7 +21,7 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class JWTService {
 
-    @Value("${jwt.secret:Y2Y4ZTM1YmYtYjYyMC00ZDllLTlhZTMtZDY2ZDU4ZTMxZmE5Cg==}")
+    @Value("${jwt.secret}")
     private String secretKey;
 
     @Value("${jwt.expiration.ms:1800000}")

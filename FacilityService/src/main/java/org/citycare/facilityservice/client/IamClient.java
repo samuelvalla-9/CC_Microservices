@@ -11,7 +11,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 public interface IamClient {
 
     // 1. Doctors and Nurses
-    @PostMapping("/api/admin/staff")
+
+    @PostMapping("/admin/staff")
     ApiResponse<UserResponse> createStaffAccount(@RequestBody StaffRequest request);
 
     // 2. Dispatchers

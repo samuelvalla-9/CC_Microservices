@@ -132,6 +132,12 @@ public class CitizenServiceImplementation implements CitizenService {
                 .build();
 
     }
+
+    @Override
+    public CitizenResponse getCitizenResponseByUserId(Long userId) {
+        // citizenId == userId in this system
+        return getCitizenResponseById(userId);
+    }
         public List<Citizen> getAll() {
         return citizenRepository.findAll();
     }

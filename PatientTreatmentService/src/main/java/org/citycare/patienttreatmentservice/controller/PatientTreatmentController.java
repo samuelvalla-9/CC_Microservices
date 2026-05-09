@@ -38,6 +38,13 @@ public class PatientTreatmentController {
         return ResponseEntity.ok(ApiResponse.ok("All patients", service.getAllPatients()));
     }
 
+    @GetMapping("/patients/facility/{facilityId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'NURSE')")
+    public ResponseEntity<ApiResponse<List<Patient>>> getByFacility(@PathVariable Long facilityId) {
+        return ResponseEntity.ok(ApiResponse.ok("Patients for facility " + facilityId,
+                service.getPatientsByFacility(facilityId)));
+    }
+
     @GetMapping("/patients/{id}")
     @PreAuthorize("@patientSecurity.canAccessPatient(authentication, #id)")
     public ResponseEntity<ApiResponse<Patient>> getById(@PathVariable Long id) {
@@ -64,6 +71,34 @@ public class PatientTreatmentController {
     public ResponseEntity<ApiResponse<List<Patient>>> getByStatus(@PathVariable Patient.Status status) {
         List<Patient> patients = service.getPatientsByStatus(status);
         return ResponseEntity.ok(ApiResponse.ok("Patients with status " + status, patients));
+    }
+
+    @GetMapping("/patients/unassigned")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'NURSE')")
+    public ResponseEntity<ApiResponse<List<Patient>>> getUnassigned() {
+        return ResponseEntity.ok(ApiResponse.ok("Unassigned patients", service.getUnassignedPatients()));
+    }
+
+    @GetMapping("/patients/facility/{facilityId}/unassigned")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'NURSE')")
+    public ResponseEntity<ApiResponse<List<Patient>>> getUnassignedByFacility(@PathVariable Long facilityId) {
+        return ResponseEntity.ok(ApiResponse.ok("Unassigned patients for facility " + facilityId,
+                service.getUnassignedPatientsByFacility(facilityId)));
+    }
+
+    @GetMapping("/patients/doctor/{doctorId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'NURSE')")
+    public ResponseEntity<ApiResponse<List<Patient>>> getByDoctor(@PathVariable Long doctorId) {
+        return ResponseEntity.ok(ApiResponse.ok("Patients for doctor " + doctorId,
+                service.getPatientsByDoctor(doctorId)));
+    }
+
+    @GetMapping("/patients/facility/{facilityId}/doctor/{doctorId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'NURSE')")
+    public ResponseEntity<ApiResponse<List<Patient>>> getByFacilityAndDoctor(
+            @PathVariable Long facilityId, @PathVariable Long doctorId) {
+        return ResponseEntity.ok(ApiResponse.ok("Doctor's patients in facility",
+                service.getPatientsByFacilityAndDoctor(facilityId, doctorId)));
     }
 
     // ------------------------------    Treatments -------------------------------------------

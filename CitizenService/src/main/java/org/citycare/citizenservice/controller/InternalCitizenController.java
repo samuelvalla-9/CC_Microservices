@@ -5,10 +5,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.citycare.citizenservice.dto.request.CitizenInternalCreateRequest;
 import org.citycare.citizenservice.dto.response.ApiResponse;
+import org.citycare.citizenservice.dto.response.CitizenResponse;
 import org.citycare.citizenservice.entity.Citizen;
 import org.citycare.citizenservice.service.CitizenService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -39,9 +41,19 @@ public class InternalCitizenController {
      * Called by emergency-service / compliance-service via OpenFeign to check if a citizen exists.
      */
     @GetMapping("/user/{userId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Citizen>> getByUserId(@PathVariable Long userId) {
         return ResponseEntity.ok(ApiResponse.ok("Citizen",
                 citizenService.getProfile(userId)));
+    }
+
+    /**
+     * Called by emergency-service via OpenFeign — returns plain CitizenResponse (no ApiResponse wrapper).
+     */
+    @GetMapping("/user/{userId}/citizen")
+    @PreAuthorize("isAuthenticated()")
+    public CitizenResponse getCitizenByUserId(@PathVariable Long userId) {
+        return citizenService.getCitizenResponseByUserId(userId);
     }
 
 

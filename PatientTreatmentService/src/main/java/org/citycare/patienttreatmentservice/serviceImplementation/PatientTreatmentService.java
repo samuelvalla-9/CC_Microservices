@@ -86,6 +86,7 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
         Patient patient = Patient.builder()
                 .citizenId(req.getCitizenId())
                 .emergencyId(req.getEmergencyId())
+                .facilityId(req.getFacilityId())
                 .admissionDate(LocalDate.now())
                 .ward(req.getWard())
                 .notes(req.getNotes())
@@ -118,6 +119,10 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
 
     public List<Patient> getAllPatients() {
         return patientRepository.findAll();
+    }
+
+    public List<Patient> getPatientsByFacility(Long facilityId) {
+        return patientRepository.findByFacilityId(facilityId);
     }
 
     public Patient getPatientById(Long id) {
@@ -193,7 +198,21 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
         return emergencyClient.getById(patient.getEmergencyId());
     }
 
+    public List<Patient> getUnassignedPatients() {
+        return patientRepository.findByAssignedStaffIdIsNull();
+    }
 
+    public List<Patient> getUnassignedPatientsByFacility(Long facilityId) {
+        return patientRepository.findByFacilityIdAndAssignedStaffIdIsNull(facilityId);
+    }
+
+    public List<Patient> getPatientsByDoctor(Long doctorId) {
+        return patientRepository.findByAssignedStaffId(doctorId);
+    }
+
+    public List<Patient> getPatientsByFacilityAndDoctor(Long facilityId, Long doctorId) {
+        return patientRepository.findByFacilityIdAndAssignedStaffId(facilityId, doctorId);
+    }
 
     // --------------------------------------------  Treatment -------------------------------------------------------
 
@@ -265,6 +284,13 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
         }
 
         // 4. Create and Save Treatment
+        // Assign the patient to this staff if not already assigned
+        if (patient.getAssignedStaffId() == null) {
+            patient.setAssignedStaffId(assignedById);
+            patientRepository.save(patient);
+            log.info("Patient {} assigned to Staff ID: {}", patient.getPatientId(), assignedById);
+        }
+
         Treatment treatment = Treatment.builder()
                 .patient(patient)
                 .assignedById(assignedById)

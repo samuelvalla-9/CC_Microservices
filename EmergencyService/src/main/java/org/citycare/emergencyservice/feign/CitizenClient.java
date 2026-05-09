@@ -8,12 +8,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 @FeignClient(name = "CITIZENSERVICE", fallback = CitizenClientFallback.class)
 public interface CitizenClient {
 
-    @GetMapping("/citizens/{id}")
+    @GetMapping("/api/citizens/internal/{id}")
     CitizenResponse getById(@PathVariable("id") Long citizenId);
 
-    @GetMapping("/citizens/internal/{id}/verified")
+    @GetMapping("/api/citizens/internal/{id}/verified")
     boolean isCitizenVerified(@PathVariable("id") Long citizenId);
 
-    @GetMapping("/citizens/user/{userId}")
+    @GetMapping("/citizens/internal/user/{userId}/citizen")
     CitizenResponse getCitizenByUserId(@PathVariable("userId") Long userId);
 }

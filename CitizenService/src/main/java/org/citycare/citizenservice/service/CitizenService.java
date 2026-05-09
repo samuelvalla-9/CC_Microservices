@@ -18,5 +18,6 @@ public interface CitizenService {
     CitizenDocumentResponse verifyDocument(Long documentId, CitizenDocument.VerificationStatus status);
     List<CitizenDocumentResponse> getDocuments(Long citizenId);
     CitizenResponse getCitizenResponseById(Long citizenId);
+    CitizenResponse getCitizenResponseByUserId(Long userId);
     boolean isCitizenDocumentVerified(Long citizenId);
 }

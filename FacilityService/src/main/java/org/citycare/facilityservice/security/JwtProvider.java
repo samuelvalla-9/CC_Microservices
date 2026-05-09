@@ -1,31 +1,19 @@
 package org.citycare.facilityservice.security;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
+import org.citycare.security.jwt.JwtClaimsSupport;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
-import javax.crypto.SecretKey;
 import java.util.Date;
 
 @Component
 public class JwtProvider {
 
-    @Value("${jwt.secret:Y2Y4ZTM1YmYtYjYyMC00ZDllLTlhZTMtZDY2ZDU4ZTMxZmE5Cg==}")
+    @Value("${jwt.secret}")
     private String secret;
 
     public Claims getClaims(String token) {
-        // 1. Create the Key
-        SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64URL.decode(secret));
-
-        // 2. Use parserBuilder() - This is the standard for 0.11.x
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build() // This should now compile perfectly
-                .parseClaimsJws(token)
-                .getBody();
+        return JwtClaimsSupport.parseClaims(token, secret);
     }
 
     public boolean isTokenExpired(Claims claims) {
