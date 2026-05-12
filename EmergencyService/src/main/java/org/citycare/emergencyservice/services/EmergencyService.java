@@ -18,6 +18,7 @@ public interface EmergencyService {
     List<Emergency> getMyCases(Long citizenId);
     List<Emergency> getReportedEmergencies();
     List<Emergency> getDispatchedEmergencies();
+    List<Emergency> getMyDispatchHistory(Long dispatcherId);
     Emergency updateEmergencyStatus(Long emergencyId, String status);
 //    CitizenResponse getCitizenForEmergency(Long emergencyId);
 

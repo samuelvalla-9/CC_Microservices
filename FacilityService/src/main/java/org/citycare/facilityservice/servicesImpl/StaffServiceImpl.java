@@ -1,6 +1,8 @@
 package org.citycare.facilityservice.servicesImpl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import feign.FeignException;
 import org.citycare.facilityservice.client.IamClient;
 import org.citycare.facilityservice.dto.request.StaffRequest;
 import org.citycare.facilityservice.dto.response.ApiResponse;
@@ -12,6 +14,7 @@ import org.citycare.facilityservice.exceptions.ResourceNotFoundException;
 import org.citycare.facilityservice.repositories.FacilityRepository;
 import org.citycare.facilityservice.repositories.StaffRepository;
 import org.citycare.facilityservice.services.StaffService;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +22,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class StaffServiceImpl implements StaffService {
 
@@ -33,19 +37,15 @@ public class StaffServiceImpl implements StaffService {
         Facility facility = facilityRepository.findById(request.getFacilityId())
                 .orElseThrow(() -> new ResourceNotFoundException("Facility", request.getFacilityId()));
 
-        ApiResponse<UserResponse> iamResponse;
+        UserResponse user = createOrResolveUser(request);
+        if (user == null || user.getUserId() == null) {
+            throw new IllegalStateException("User account creation succeeded without a valid user id");
+        }
 
-        // Using Java 21 Pattern Matching/Switch
-        iamResponse = switch (request.getRole()) {
-            case DOCTOR, NURSE -> iamClient.createStaffAccount(request);
-            case DISPATCHER -> iamClient.createDispatcherAccount(request);
-            case COMPLIANCE_OFFICER -> iamClient.createComplianceAccount(request);
-            case HEALTH_OFFICER -> iamClient.createHealthOfficerAccount(request);
-            default -> throw new IllegalArgumentException("Unsupported role for staff creation: " + request.getRole());
-        };
-
-        // 3. Extract the User data from the wrapper
-        UserResponse user = iamResponse.getData();
+        Staff existingStaff = staffRepository.findById(user.getUserId()).orElse(null);
+        if (existingStaff != null) {
+            return mapToResponse(existingStaff);
+        }
 
         // 4. Save to Facility Service DB (Linking the IAM userId)
         Staff staff = Staff.builder()
@@ -58,8 +58,96 @@ public class StaffServiceImpl implements StaffService {
 //                .userId(user.getUserId())
                 .build();
 
-        Staff savedStaff = staffRepository.save(staff);
-        return mapToResponse(savedStaff);
+        try {
+            Staff savedStaff = staffRepository.save(staff);
+            return mapToResponse(savedStaff);
+        } catch (DataAccessException ex) {
+            Staff recovered = staffRepository.findById(user.getUserId()).orElse(null);
+            if (recovered != null) {
+                return mapToResponse(recovered);
+            }
+
+            // Compensation: delete account if local staff persistence fails
+            try {
+                iamClient.deleteUser(user.getUserId());
+            } catch (Exception ignored) {
+                // Fallback to deactivation if hard delete is unavailable
+                try {
+                    iamClient.deactivateUser(user.getUserId());
+                } catch (Exception ignoredToo) {
+                    // no-op: keep the original DB exception as root cause
+                }
+            }
+            throw ex;
+        }
+    }
+
+    private UserResponse createOrResolveUser(StaffRequest request) {
+        try {
+            ApiResponse<UserResponse> iamResponse = switch (request.getRole()) {
+                case DOCTOR, NURSE -> iamClient.createStaffAccount(request);
+                case DISPATCHER -> iamClient.createDispatcherAccount(request);
+                case COMPLIANCE_OFFICER -> iamClient.createComplianceAccount(request);
+                case HEALTH_OFFICER -> iamClient.createHealthOfficerAccount(request);
+                default -> throw new IllegalArgumentException("Unsupported role for staff creation: " + request.getRole());
+            };
+            return iamResponse != null ? iamResponse.getData() : null;
+        } catch (FeignException ex) {
+            UserResponse reconciled = resolveUserByEmailForRecoverableCreateFailure(request, ex);
+            if (reconciled != null) {
+                return reconciled;
+            }
+            throw ex;
+        }
+    }
+
+    private UserResponse resolveUserByEmailForRecoverableCreateFailure(StaffRequest request, FeignException ex) {
+        if (!isRecoverableCreateFailure(ex)) {
+            return null;
+        }
+
+        for (int attempt = 1; attempt <= 4; attempt++) {
+            try {
+                ApiResponse<UserResponse> lookup = iamClient.getUserByEmail(request.getEmail());
+                UserResponse user = lookup != null ? lookup.getData() : null;
+                if (user != null && user.getUserId() != null) {
+                    if (user.getRole() != null && !user.getRole().equalsIgnoreCase(request.getRole().name())) {
+                        throw new IllegalStateException("Email already exists with different role: " + user.getRole());
+                    }
+                    return user;
+                }
+            } catch (FeignException.NotFound notFound) {
+                // Keep retrying briefly because AuthService may commit shortly after timeout.
+            } catch (IllegalStateException roleMismatch) {
+                throw roleMismatch;
+            } catch (Exception lookupError) {
+                log.warn("Failed to reconcile user by email on attempt {} for {}: {}",
+                        attempt, request.getEmail(), lookupError.getMessage());
+            }
+
+            if (attempt < 4) {
+                try {
+                    Thread.sleep(300L * attempt);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private boolean isRecoverableCreateFailure(FeignException ex) {
+        int status = ex.status();
+        String msg = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase();
+        return status == 409
+                || status == 408
+                || status == 504
+                || status == 500
+                || status == -1
+                || msg.contains("timed out")
+                || msg.contains("timeout");
     }
 
     @Override
@@ -106,10 +194,10 @@ public class StaffServiceImpl implements StaffService {
     @Override
     @Transactional
     public void deleteStaff(Long id) {
-        if (!staffRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Staff", id);
+        if (staffRepository.existsById(id)) {
+            staffRepository.deleteById(id);
         }
-        staffRepository.deleteById(id);
+        // no-op if missing (idempotent delete)
     }
 
     // --- Helper for DTO Mapping ---

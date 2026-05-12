@@ -17,6 +17,8 @@ import org.citycare.citizenservice.repository.CitizenRepository;
 import org.citycare.citizenservice.service.CitizenService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -65,22 +67,41 @@ public class CitizenServiceImplementation implements CitizenService {
                 .orElse(new Citizen());
 
         citizen.setCitizenId(userId);
-        
-        // Only update fields if they are provided (not null)
-        if (req.getName() != null && !req.getName().isEmpty()) {
-            citizen.setName(req.getName());
+
+        // Required fields: explicit null/blank is not allowed
+        if (req.hasField("name")) {
+            if (req.getName() == null || req.getName().isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name cannot be empty");
+            }
+            citizen.setName(req.getName().trim());
         }
-        if (req.getDateOfBirth() != null) {
+
+        if (req.hasField("contactInfo")) {
+            if (req.getContactInfo() == null || req.getContactInfo().isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Contact info cannot be empty");
+            }
+            citizen.setContactInfo(req.getContactInfo().trim());
+        }
+
+        // Optional fields: explicit null/blank clears value, omitted means no change
+        if (req.hasField("dateOfBirth")) {
             citizen.setDateOfBirth(req.getDateOfBirth());
         }
-        if (req.getGender() != null) {
+
+        if (req.hasField("gender")) {
             citizen.setGender(req.getGender());
         }
-        if (req.getAddress() != null && !req.getAddress().isEmpty()) {
-            citizen.setAddress(req.getAddress());
+
+        if (req.hasField("address")) {
+            if (req.getAddress() == null || req.getAddress().isBlank()) {
+                citizen.setAddress(null);
+            } else {
+                citizen.setAddress(req.getAddress().trim());
+            }
         }
-        if (req.getContactInfo() != null && !req.getContactInfo().isEmpty()) {
-            citizen.setContactInfo(req.getContactInfo());
+
+        if (citizen.getName() == null || citizen.getName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name is required");
         }
         
         citizen.setStatus(Citizen.Status.ACTIVE);
@@ -91,12 +112,12 @@ public class CitizenServiceImplementation implements CitizenService {
 
         // Try to update auth service, but don't fail if it errors
         try {
-            if (req.getName() != null || req.getContactInfo() != null) {
+            if (req.hasField("name") || req.hasField("contactInfo")) {
                 authClient.updateUserProfile(
                         userId,
                         new UserProfileUpdateRequest(
-                                req.getName() != null ? req.getName() : saved.getName(),
-                                req.getContactInfo() != null ? req.getContactInfo() : saved.getContactInfo()
+                    saved.getName(),
+                    saved.getContactInfo()
                         )
                 );
                 log.info("Auth service profile updated successfully");

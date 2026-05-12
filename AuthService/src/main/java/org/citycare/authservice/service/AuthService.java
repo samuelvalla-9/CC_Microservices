@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.List;
 
 @Slf4j
@@ -27,6 +28,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JWTService jwtService;
 
     // OpenFeign: auto-create citizen profile after citizen registration
     private final CitizenClient citizenClient;
@@ -72,12 +74,9 @@ public class AuthService {
         }
 
         try {
-            notificationClient.sendAuthEvent(new NotificationClient.AuthEventPayload(
-                savedUser.getUserId(), savedUser.getName(), savedUser.getRole().name(),
-                "USER_REGISTERED", savedUser.getEmail()
-            ));
-        } catch (Exception e) {
-            log.warn("Could not send registration notification", e);
+            sendAuthEventAsync(savedUser);
+        } catch (Exception ignored) {
+            // Non-blocking by design
         }
 
         return mapToResponse(savedUser);
@@ -110,15 +109,13 @@ public class AuthService {
                 .password(passwordEncoder.encode(req.getPassword()))
                 .phone(req.getPhone()).role(role)
                 .status(User.Status.ACTIVE).build());
-        try {
-            notificationClient.sendAuthEvent(new NotificationClient.AuthEventPayload(
-                saved.getUserId(), saved.getName(), saved.getRole().name(),
-                "USER_REGISTERED", saved.getEmail()
-            ));
-        } catch (Exception e) {
-            log.warn("Could not send staff registration notification", e);
-        }
+        sendAuthEventAsync(saved);
         return saved;
+    }
+
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
     }
 
     public List<User> getAllStaff() {
@@ -188,10 +185,46 @@ public class AuthService {
         return saved;
     }
 
+    @Transactional
+    public void deleteUser(Long id) {
+        User user = userRepository.findById(id).orElse(null);
+        if (user == null) return; // already deleted
+
+        try {
+            userRepository.delete(user);
+            userRepository.flush();
+            log.info("User {} ({}) deleted successfully", user.getUserId(), user.getEmail());
+        } catch (Exception ex) {
+            log.warn("Hard delete failed for user {}. Falling back to deactivate. Cause: {}", id, ex.getMessage());
+            User fallbackUser = userRepository.findById(id).orElse(null);
+            if (fallbackUser != null) {
+                fallbackUser.setStatus(User.Status.INACTIVE);
+                userRepository.save(fallbackUser);
+                userRepository.flush();
+            }
+        }
+    }
+
     private void validateUniqueEmail(String email) {
         if (userRepository.existsByEmail(email)) {
             throw new EmailAlreadyRegisteredException(email);
         }
+    }
+
+    private void sendAuthEventAsync(User user) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                notificationClient.sendAuthEvent(new NotificationClient.AuthEventPayload(
+                        user.getUserId(),
+                        user.getName(),
+                        user.getRole().name(),
+                        "USER_REGISTERED",
+                        user.getEmail()
+                ));
+            } catch (Exception e) {
+                log.warn("Could not send staff registration notification", e);
+            }
+        });
     }
 
 
@@ -199,7 +232,9 @@ public class AuthService {
     private AuthResponse mapToResponse(User user) {
         return AuthResponse.builder()
                 .userId(user.getUserId()).name(user.getName())
-                .email(user.getEmail()).role(user.getRole()).build();
+                .email(user.getEmail()).role(user.getRole())
+                .token(jwtService.generateToken(user))
+                .build();
     }
 
 

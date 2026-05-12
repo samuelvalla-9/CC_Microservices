@@ -6,8 +6,6 @@ spring:
     name: PATIENTTREATMENTSERVICE
   datasource:
     url: jdbc:mysql://localhost:3306/citycare_patient_treatment?createDatabaseIfNotExist=true
-    username: root
-    password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
   sql:
     init:

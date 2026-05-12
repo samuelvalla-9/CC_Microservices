@@ -9,13 +9,11 @@ spring:
   cloud:
     config:
       server:
-        # Using native (file-system based) backend for local development
-        # In production, you would use git backend instead
         native:
-          search-locations: file:///C:/Users/2478356/Downloads/CityCare-Microservices/config-repo
-          # Alternative search-locations (uncomment for your environment):
-          # - file:${user.home}/config-repo
-          # - file:/var/config-repo
+          # Supports running ConfigServer from module dir or project root.
+          search-locations:
+            - file:${user.dir}/../config-repo
+            - file:${user.dir}/config-repo
 
 eureka:
   client:

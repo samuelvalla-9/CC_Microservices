@@ -118,6 +118,12 @@ public class AuthController {
         return ResponseEntity.ok(authService.getUsersByRole(role));
     }
 
+    @GetMapping("/admin/users/by-email")
+    @Operation(summary = "[INTERNAL] Get user by email - used for staff reconciliation")
+    public ResponseEntity<ApiResponse<User>> getUserByEmail(@RequestParam("email") String email) {
+        return ResponseEntity.ok(ApiResponse.ok("User", authService.getUserByEmail(email)));
+    }
+
     @PatchMapping("/admin/users/{id}/deactivate")
     @Operation(summary = "[ADMIN] Deactivate user account")
     public ResponseEntity<ApiResponse<User>> deactivateUser(@PathVariable Long id) {
@@ -128,6 +134,13 @@ public class AuthController {
     @Operation(summary = "[ADMIN] Activate user account")
     public ResponseEntity<ApiResponse<User>> activateUser(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok("User activated", authService.activateUser(id)));
+    }
+
+    @DeleteMapping("/admin/users/{id}")
+    @Operation(summary = "[ADMIN] Permanently remove user account")
+    public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
+        authService.deleteUser(id);
+        return ResponseEntity.ok(ApiResponse.ok("User removed", null));
     }
 
 

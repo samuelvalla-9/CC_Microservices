@@ -135,6 +135,12 @@ What used to take 18 minutes of phone calls, guesswork, and paperwork — now ha
 
 ## 🛠️ Running CityCare Locally
 
+### Local config setup (team-friendly)
+- Keep the `config-repo` folder inside the project root (`CC_Microservices/config-repo`).
+- Config Server now checks both `../config-repo` and `./config-repo` relative to its run directory.
+- Update MySQL credentials in exactly one place: `config-repo/application.yml` under `spring.datasource.username` and `spring.datasource.password`.
+- Service-specific database names stay in each `config-repo/*service.yml` file via `spring.datasource.url`.
+
 ```bash
 # Clone the repository
 git clone https://github.com/your-org/citycare.git

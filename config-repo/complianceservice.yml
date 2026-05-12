@@ -6,8 +6,6 @@ spring:
     name: COMPLIANCESERVICE
   datasource:
     url: jdbc:mysql://localhost:3306/citycare_compliance?createDatabaseIfNotExist=true
-    username: root
-    password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -41,4 +39,4 @@ logging:
     org.springframework.web: INFO
 
 jwt:
-  secret: "your-very-secure-secret"
+  secret: Y2Y4ZTM1YmYtYjYyMC00ZDllLTlhZTMtZDY2ZDU4ZTMxZmE5Cg==

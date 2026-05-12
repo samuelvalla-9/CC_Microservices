@@ -8,6 +8,7 @@ import org.citycare.notificationservice.feign.AuthClient;
 import org.citycare.notificationservice.repository.NotificationRepository;
 import org.citycare.notificationservice.service.EmailService;
 import org.citycare.notificationservice.service.NotificationService;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final EmailService emailService;
     private final AuthClient authClient;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional
@@ -36,7 +38,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .status(Notification.NotificationStatus.UNREAD)
                 .build();
 
-        Notification saved = notificationRepository.save(notification);
+        Notification saved = saveAndPublish(notification);
 
         if (request.getRecipientEmail() != null && !request.getRecipientEmail().isBlank()) {
             emailService.sendEmail(request.getRecipientEmail(),
@@ -113,7 +115,7 @@ public class NotificationServiceImpl implements NotificationService {
                         .channel(Notification.Channel.IN_APP)
                         .status(Notification.NotificationStatus.UNREAD)
                         .build();
-                notificationRepository.save(citizenNotif);
+                saveAndPublish(citizenNotif);
                 
                 if (event.getRecipientEmail() != null) {
                     emailService.sendEmail(event.getRecipientEmail(), title, message);
@@ -138,7 +140,7 @@ public class NotificationServiceImpl implements NotificationService {
                                 .channel(Notification.Channel.IN_APP)
                                 .status(Notification.NotificationStatus.UNREAD)
                                 .build();
-                        notificationRepository.save(adminNotif);
+                        saveAndPublish(adminNotif);
                         
                         if (admin.email() != null) {
                             emailService.sendEmail(admin.email(), adminTitle, adminMessage);
@@ -181,7 +183,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .status(Notification.NotificationStatus.UNREAD)
                 .build();
 
-        Notification saved = notificationRepository.save(notification);
+        Notification saved = saveAndPublish(notification);
 
         if (event.getRecipientEmail() != null) {
             emailService.sendEmail(event.getRecipientEmail(), title, message);
@@ -241,7 +243,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .status(Notification.NotificationStatus.UNREAD)
                 .build();
 
-        Notification saved = notificationRepository.save(notification);
+        Notification saved = saveAndPublish(notification);
 
         if (event.getRecipientEmail() != null) {
             emailService.sendEmail(event.getRecipientEmail(), title, message);
@@ -297,7 +299,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .status(Notification.NotificationStatus.UNREAD)
                 .build();
 
-        Notification saved = notificationRepository.save(notification);
+        Notification saved = saveAndPublish(notification);
 
         if (event.getRecipientEmail() != null) {
             emailService.sendEmail(event.getRecipientEmail(), title, message);
@@ -351,7 +353,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .status(Notification.NotificationStatus.UNREAD)
                 .build();
 
-        Notification saved = notificationRepository.save(notification);
+        Notification saved = saveAndPublish(notification);
 
         if (event.getRecipientEmail() != null) {
             emailService.sendEmail(event.getRecipientEmail(), title, message);
@@ -407,7 +409,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .status(Notification.NotificationStatus.UNREAD)
                 .build();
 
-        Notification saved = notificationRepository.save(notification);
+        Notification saved = saveAndPublish(notification);
 
         if (event.getRecipientEmail() != null) {
             emailService.sendEmail(event.getRecipientEmail(), title, message);
@@ -440,7 +442,7 @@ public class NotificationServiceImpl implements NotificationService {
                         .channel(Notification.Channel.IN_APP)
                         .status(Notification.NotificationStatus.UNREAD)
                         .build();
-                Notification saved = notificationRepository.save(notif);
+                Notification saved = saveAndPublish(notif);
                 if (firstSaved == null) firstSaved = saved;
 
                 if (admin.email() != null) {
@@ -459,5 +461,20 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public void deleteNotification(Long id) {
         notificationRepository.deleteById(id);
+    }
+
+    private Notification saveAndPublish(Notification notification) {
+        Notification saved = notificationRepository.save(notification);
+        try {
+            messagingTemplate.convertAndSendToUser(
+                    String.valueOf(saved.getUserId()),
+                    "/queue/notifications",
+                    saved
+            );
+        } catch (Exception ex) {
+            log.warn("Failed to publish notification {} to websocket user {}: {}",
+                    saved.getNotificationId(), saved.getUserId(), ex.getMessage());
+        }
+        return saved;
     }
 }

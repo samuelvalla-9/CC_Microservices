@@ -15,17 +15,21 @@ import org.citycare.emergencyservice.exception.ResourceNotFoundException;
 //import org.citycare.emergencyservice.feign.dto.CitizenResponse;
 import org.citycare.emergencyservice.feign.CitizenClient;
 import org.citycare.emergencyservice.feign.NotificationClient;
+import org.citycare.emergencyservice.feign.StaffClient;
 import org.citycare.emergencyservice.feign.dto.CitizenResponse;
+import org.citycare.emergencyservice.feign.dto.StaffResponse;
 import org.citycare.emergencyservice.repository.AmbulanceRepository;
 import org.citycare.emergencyservice.repository.EmergencyRepository;
 import org.citycare.emergencyservice.services.EmergencyService;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -37,6 +41,7 @@ public class EmergencyServiceImpl implements EmergencyService{
     private final AmbulanceRepository ambulanceRepository;
     private final CitizenClient citizenClient;
     private final NotificationClient notificationClient;
+    private final StaffClient staffClient;
 
 
 
@@ -87,15 +92,17 @@ public class EmergencyServiceImpl implements EmergencyService{
                 .build();
 
         Emergency saved = emergencyRepository.save(emergency);
-        try {
-            String email = citizen.getContactInfo();
-            notificationClient.sendEmergencyEvent(new NotificationClient.EmergencyEventPayload(
-                saved.getEmergencyId(), saved.getCitizenId(), saved.getType().name(),
-                saved.getLocation(), null, "REPORTED", null, email
-            ));
-        } catch (Exception e) {
-            log.warn("Could not send emergency reported notification", e);
-        }
+        CompletableFuture.runAsync(() -> {
+            try {
+                String email = citizen.getContactInfo();
+                notificationClient.sendEmergencyEvent(new NotificationClient.EmergencyEventPayload(
+                    saved.getEmergencyId(), saved.getCitizenId(), saved.getType().name(),
+                    saved.getLocation(), null, "REPORTED", null, email
+                ));
+            } catch (Exception e) {
+                log.warn("Could not send emergency reported notification", e);
+            }
+        });
         return saved;
     }
     @Override
@@ -110,6 +117,11 @@ public class EmergencyServiceImpl implements EmergencyService{
 
         Ambulance ambulance = ambulanceRepository.findById(req.getAmbulanceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Ambulance", req.getAmbulanceId()));
+
+        Long dispatcherFacilityId = resolveDispatcherFacilityId(dispatcherId);
+        if (!dispatcherFacilityId.equals(ambulance.getFacilityId())) {
+            throw new BadRequestException("Dispatcher can only dispatch ambulances from their assigned facility");
+        }
 
         if (ambulance.getStatus() != Ambulance.Status.AVAILABLE) {
             throw new BadRequestException("Ambulance " + ambulance.getVehicleNumber() + " is not available");
@@ -138,6 +150,12 @@ public class EmergencyServiceImpl implements EmergencyService{
 
     @Override
     public List<Ambulance> getAvailableAmbulances() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (isDispatcher(auth)) {
+            Long dispatcherId = parseUserId(auth);
+            Long facilityId = resolveDispatcherFacilityId(dispatcherId);
+            return ambulanceRepository.findByFacilityIdAndStatus(facilityId, Ambulance.Status.AVAILABLE);
+        }
         return ambulanceRepository.findByStatus(Ambulance.Status.AVAILABLE);
     }
 
@@ -149,6 +167,11 @@ public class EmergencyServiceImpl implements EmergencyService{
     @Override
     public List<Emergency> getDispatchedEmergencies() {
         return emergencyRepository.findByStatus(Emergency.Status.DISPATCHED);
+    }
+
+    @Override
+    public List<Emergency> getMyDispatchHistory(Long dispatcherId) {
+        return emergencyRepository.findByDispatcherIdOrderByDispatchedAtDesc(dispatcherId);
     }
 
     @Override
@@ -197,6 +220,12 @@ public class EmergencyServiceImpl implements EmergencyService{
 
     @Override
     public List<Ambulance> getAllAmbulances() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (isDispatcher(auth)) {
+            Long dispatcherId = parseUserId(auth);
+            Long facilityId = resolveDispatcherFacilityId(dispatcherId);
+            return ambulanceRepository.findByFacilityId(facilityId);
+        }
         return ambulanceRepository.findAll();
     }
 
@@ -224,8 +253,8 @@ public class EmergencyServiceImpl implements EmergencyService{
 
     @Override
     public EmergencyResponse getEmergencyResponseById(Long id) {
-
-        Emergency e = emergencyRepository.getById(id);
+        Emergency e = emergencyRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Emergency", id));
 
         return EmergencyResponse.builder()
                 .emergencyId(e.getEmergencyId())
@@ -257,6 +286,42 @@ public class EmergencyServiceImpl implements EmergencyService{
         // 4. Save the updated ambulance
         ambulanceRepository.save(ambulance);
         log.info("Ambulance {} released and marked AVAILABLE for Emergency {}", ambulance.getVehicleNumber(), emergencyId);
+    }
+
+    private boolean isDispatcher(Authentication auth) {
+        if (auth == null || auth.getAuthorities() == null) {
+            return false;
+        }
+        return auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_DISPATCHER"::equals);
+    }
+
+    private Long parseUserId(Authentication auth) {
+        if (auth == null || auth.getName() == null) {
+            throw new BadRequestException("Authenticated user not found");
+        }
+        try {
+            return Long.parseLong(auth.getName());
+        } catch (NumberFormatException ex) {
+            throw new BadRequestException("Invalid authenticated user id");
+        }
+    }
+
+    private Long resolveDispatcherFacilityId(Long dispatcherId) {
+        try {
+            var response = staffClient.getStaffById(dispatcherId);
+            StaffResponse staff = response != null ? response.getData() : null;
+            if (staff == null || staff.getFacilityId() == null) {
+                throw new BadRequestException("Dispatcher is not assigned to any facility");
+            }
+            return staff.getFacilityId();
+        } catch (BadRequestException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.warn("Failed to resolve facility for dispatcher {}: {}", dispatcherId, ex.getMessage());
+            throw new BadRequestException("Unable to determine dispatcher facility");
+        }
     }
 
 }

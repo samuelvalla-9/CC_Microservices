@@ -1,6 +1,11 @@
 # Global shared configuration for all services
 # This file contains common settings shared across all microservices
 
+spring:
+  datasource:
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:pat129}
+
 management:
   endpoints:
     web:

@@ -85,6 +85,19 @@ public class EmergencyController {
         return ResponseEntity.ok(ApiResponse.ok("Dispatched emergencies", emergencyService.getDispatchedEmergencies()));
     }
 
+    @GetMapping("/my-dispatch-history")
+    @PreAuthorize("hasRole('DISPATCHER')")
+    public ResponseEntity<ApiResponse<List<Emergency>>> getMyDispatchHistory(Authentication authentication) {
+        Long dispatcherId;
+        try {
+            dispatcherId = Long.parseLong(authentication.getName());
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid authenticated user");
+        }
+        return ResponseEntity.ok(ApiResponse.ok("My dispatch history",
+                emergencyService.getMyDispatchHistory(dispatcherId)));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Emergency>> getById(@PathVariable Long id) {

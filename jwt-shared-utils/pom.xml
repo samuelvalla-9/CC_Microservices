@@ -16,6 +16,10 @@
     <description>Shared JWT parsing and claim extraction helpers for CityCare services</description>
     <packaging>jar</packaging>
 
+    <properties>
+        <spring-boot.repackage.skip>true</spring-boot.repackage.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>

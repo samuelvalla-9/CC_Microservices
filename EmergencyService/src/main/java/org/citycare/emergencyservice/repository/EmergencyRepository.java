@@ -11,4 +11,5 @@ public interface EmergencyRepository extends JpaRepository<Emergency, Long> {
     List<Emergency> findByStatusOrderByCreatedAtDesc(Emergency.Status status);
     List<Emergency> findByStatus(Emergency.Status status);
     List<Emergency> findByCitizenId(Long citizenId);
+    List<Emergency> findByDispatcherIdOrderByDispatchedAtDesc(Long dispatcherId);
 }
