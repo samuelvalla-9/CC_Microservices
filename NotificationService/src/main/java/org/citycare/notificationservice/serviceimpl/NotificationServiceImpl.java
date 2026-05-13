@@ -270,9 +270,13 @@ public class NotificationServiceImpl implements NotificationService {
             }
             case "AUDIT_CREATED" -> {
                 title = "🔍 Audit Initiated";
-                message = String.format(
-                        "An audit has been initiated by Officer #%d for entity #%d [%s].",
-                        event.getOfficerId(), event.getEntityId(), event.getEntityType());
+                if (event.getOfficerId() != null) {
+                    message = String.format(
+                            "An audit has been initiated by Officer #%d.",
+                            event.getOfficerId());
+                } else {
+                    message = "An audit has been initiated.";
+                }
             }
             case "AUDIT_COMPLETED" -> {
                 title = "✅ Audit Completed";
