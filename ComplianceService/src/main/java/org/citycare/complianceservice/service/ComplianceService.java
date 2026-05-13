@@ -12,23 +12,23 @@ public interface ComplianceService {
 
     ComplianceRecord createRecord(Long officerId, ComplianceRecordRequest req);
 
-    List<ComplianceRecord> getAllRecords();
+    List<ComplianceRecord> getAllRecords(Long actorId);
 
-    ComplianceRecord getRecordById(Long id);
+    ComplianceRecord getRecordById(Long actorId, Long id);
 
-    List<ComplianceRecord> getRecordsByEntity(Long entityId);
+    List<ComplianceRecord> getRecordsByEntity(Long actorId, Long entityId);
 
-    List<ComplianceRecord> getRecordsByType(ComplianceRecord.EntityType type);
+    List<ComplianceRecord> getRecordsByType(Long actorId, ComplianceRecord.EntityType type);
 
     Audit createAudit(Long officerId, AuditRequest req);
 
-    List<Audit> getAllAudits();
+    List<Audit> getAllAudits(Long actorId);
 
-    Audit getAuditById(Long id);
+    Audit getAuditById(Long actorId, Long id);
 
-    Audit updateAuditStatus(Long id, Audit.Status status, String findings);
+    Audit updateAuditStatus(Long actorId, Long id, Audit.Status status, String findings);
 
-    List<AuditLog> getAllLogs();
+    List<AuditLog> getAllLogs(Long actorId);
 
-    List<AuditLog> getLogsByUser(Long userId);
+    List<AuditLog> getLogsByUser(Long actorId, Long userId);
 }

@@ -8,6 +8,7 @@ import org.citycare.complianceservice.entity.ComplianceRecord;
 import org.citycare.complianceservice.exception.ResourceNotFoundException;
 import org.citycare.complianceservice.feign.EmergencyClient;
 import org.citycare.complianceservice.feign.FacilityClient;
+import org.citycare.complianceservice.feign.NotificationClient;
 import org.citycare.complianceservice.feign.PatientClient;
 import org.citycare.complianceservice.repository.AuditLogRepository;
 import org.citycare.complianceservice.repository.AuditRepository;
@@ -36,6 +37,7 @@ class ComplianceServiceImplTest {
     @Mock FacilityClient facilityClient;
     @Mock PatientClient patientClient;
     @Mock EmergencyClient emergencyClient;
+    @Mock NotificationClient notificationClient;
 
     @InjectMocks ComplianceServiceImpl complianceService;
 
@@ -77,7 +79,7 @@ class ComplianceServiceImplTest {
     void getRecordById_notFound_throwsResourceNotFoundException() {
         when(recordRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> complianceService.getRecordById(99L))
+        assertThatThrownBy(() -> complianceService.getRecordById(5L, 99L))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -85,7 +87,7 @@ class ComplianceServiceImplTest {
     void getRecordById_success() {
         when(recordRepository.findById(1L)).thenReturn(Optional.of(mockRecord));
 
-        ComplianceRecord result = complianceService.getRecordById(1L);
+        ComplianceRecord result = complianceService.getRecordById(5L, 1L);
 
         assertThat(result.getComplianceId()).isEqualTo(1L);
     }
@@ -94,7 +96,7 @@ class ComplianceServiceImplTest {
     void getAllRecords_returnsList() {
         when(recordRepository.findAll()).thenReturn(List.of(mockRecord));
 
-        List<ComplianceRecord> result = complianceService.getAllRecords();
+        List<ComplianceRecord> result = complianceService.getAllRecords(5L);
 
         assertThat(result).hasSize(1);
     }
@@ -103,7 +105,7 @@ class ComplianceServiceImplTest {
     void getRecordsByEntity_returnsList() {
         when(recordRepository.findByEntityId(10L)).thenReturn(List.of(mockRecord));
 
-        List<ComplianceRecord> result = complianceService.getRecordsByEntity(10L);
+        List<ComplianceRecord> result = complianceService.getRecordsByEntity(5L, 10L);
 
         assertThat(result).hasSize(1);
     }
@@ -128,7 +130,7 @@ class ComplianceServiceImplTest {
     void getAuditById_notFound_throwsResourceNotFoundException() {
         when(auditRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> complianceService.getAuditById(99L))
+        assertThatThrownBy(() -> complianceService.getAuditById(5L, 99L))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -137,7 +139,7 @@ class ComplianceServiceImplTest {
         when(auditRepository.findById(1L)).thenReturn(Optional.of(mockAudit));
         when(auditRepository.save(any())).thenReturn(mockAudit);
 
-        Audit result = complianceService.updateAuditStatus(1L, Audit.Status.COMPLETED, "All good");
+        Audit result = complianceService.updateAuditStatus(5L, 1L, Audit.Status.COMPLETED, "All good");
 
         assertThat(result.getStatus()).isEqualTo(Audit.Status.COMPLETED);
     }
@@ -146,7 +148,7 @@ class ComplianceServiceImplTest {
     void getAllAudits_returnsList() {
         when(auditRepository.findAll()).thenReturn(List.of(mockAudit));
 
-        List<Audit> result = complianceService.getAllAudits();
+        List<Audit> result = complianceService.getAllAudits(5L);
 
         assertThat(result).hasSize(1);
     }
@@ -156,7 +158,7 @@ class ComplianceServiceImplTest {
         AuditLog log = AuditLog.builder().userId(5L).action("CREATE").resource("compliance_records/1").build();
         when(auditLogRepository.findByUserId(5L)).thenReturn(List.of(log));
 
-        List<AuditLog> result = complianceService.getLogsByUser(5L);
+        List<AuditLog> result = complianceService.getLogsByUser(5L, 5L);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getUserId()).isEqualTo(5L);

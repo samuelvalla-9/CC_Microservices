@@ -25,7 +25,7 @@ import java.time.LocalDateTime;
 public class User {
 
     public enum Role {
-        CITIZEN, DOCTOR, NURSE, DISPATCHER, ADMIN, COMPLIANCE_OFFICER, CITY_HEALTH_OFFICER
+        CITIZEN, DOCTOR, NURSE, DISPATCHER, ADMIN, COMPLIANCE_OFFICER
     }
 
     public enum Status {

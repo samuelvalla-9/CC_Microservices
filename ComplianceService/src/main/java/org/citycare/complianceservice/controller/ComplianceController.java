@@ -40,29 +40,34 @@ public class ComplianceController {
 
     @GetMapping("/records")
     @PreAuthorize("hasRole('COMPLIANCE_OFFICER')")
-    public ResponseEntity<ApiResponse<List<ComplianceRecord>>> getAllRecords() {
-        return ResponseEntity.ok(ApiResponse.ok("All compliance records", complianceServiceImpl.getAllRecords()));
+    public ResponseEntity<ApiResponse<List<ComplianceRecord>>> getAllRecords(Authentication authentication) {
+        Long actorId = getAuthenticatedUserId(authentication);
+        return ResponseEntity.ok(ApiResponse.ok("All compliance records", complianceServiceImpl.getAllRecords(actorId)));
     }
 
     @GetMapping("/records/{id}")
     @PreAuthorize("hasRole('COMPLIANCE_OFFICER')")
-    public ResponseEntity<ApiResponse<ComplianceRecord>> getRecordById(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.ok("Compliance record", complianceServiceImpl.getRecordById(id)));
+    public ResponseEntity<ApiResponse<ComplianceRecord>> getRecordById(@PathVariable Long id, Authentication authentication) {
+        Long actorId = getAuthenticatedUserId(authentication);
+        return ResponseEntity.ok(ApiResponse.ok("Compliance record", complianceServiceImpl.getRecordById(actorId, id)));
     }
 
     @GetMapping("/records/entity/{entityId}")
     @PreAuthorize("hasRole('COMPLIANCE_OFFICER')")
-    public ResponseEntity<ApiResponse<List<ComplianceRecord>>> getByEntity(@PathVariable Long entityId) {
+    public ResponseEntity<ApiResponse<List<ComplianceRecord>>> getByEntity(@PathVariable Long entityId, Authentication authentication) {
+        Long actorId = getAuthenticatedUserId(authentication);
         return ResponseEntity.ok(ApiResponse.ok("Records for entity " + entityId,
-                complianceServiceImpl.getRecordsByEntity(entityId)));
+                complianceServiceImpl.getRecordsByEntity(actorId, entityId)));
     }
 
     @GetMapping("/records/type/{type}")
     @PreAuthorize("hasRole('COMPLIANCE_OFFICER')")
     public ResponseEntity<ApiResponse<List<ComplianceRecord>>> getByType(
-            @PathVariable ComplianceRecord.EntityType type) {
+            @PathVariable ComplianceRecord.EntityType type,
+            Authentication authentication) {
+        Long actorId = getAuthenticatedUserId(authentication);
         return ResponseEntity.ok(ApiResponse.ok("Records by type: " + type,
-                complianceServiceImpl.getRecordsByType(type)));
+                complianceServiceImpl.getRecordsByType(actorId, type)));
     }
 
     // ── Audits ────────────────────────────────────────────────────────────────
@@ -87,14 +92,16 @@ public class ComplianceController {
 
     @GetMapping("/audits")
     @PreAuthorize("hasRole('COMPLIANCE_OFFICER')")
-    public ResponseEntity<ApiResponse<List<Audit>>> getAllAudits() {
-        return ResponseEntity.ok(ApiResponse.ok("All audits", complianceServiceImpl.getAllAudits()));
+    public ResponseEntity<ApiResponse<List<Audit>>> getAllAudits(Authentication authentication) {
+        Long actorId = getAuthenticatedUserId(authentication);
+        return ResponseEntity.ok(ApiResponse.ok("All audits", complianceServiceImpl.getAllAudits(actorId)));
     }
 
     @GetMapping("/audits/{id}")
     @PreAuthorize("hasRole('COMPLIANCE_OFFICER')")
-    public ResponseEntity<ApiResponse<Audit>> getAudit(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.ok("Audit", complianceServiceImpl.getAuditById(id)));
+    public ResponseEntity<ApiResponse<Audit>> getAudit(@PathVariable Long id, Authentication authentication) {
+        Long actorId = getAuthenticatedUserId(authentication);
+        return ResponseEntity.ok(ApiResponse.ok("Audit", complianceServiceImpl.getAuditById(actorId, id)));
     }
 
     @PatchMapping("/audits/{id}/status")
@@ -102,24 +109,34 @@ public class ComplianceController {
     public ResponseEntity<ApiResponse<Audit>> updateAuditStatus(
             @PathVariable Long id,
             @RequestParam Audit.Status status,
-            @RequestParam(required = false) String findings) {
+            @RequestParam(required = false) String findings,
+            Authentication authentication) {
+        Long actorId = getAuthenticatedUserId(authentication);
         return ResponseEntity.ok(ApiResponse.ok("Audit updated",
-                complianceServiceImpl.updateAuditStatus(id, status, findings)));
+            complianceServiceImpl.updateAuditStatus(actorId, id, status, findings)));
     }
 
     // ── Audit Logs ────────────────────────────────────────────────────────────
 
     @GetMapping("/logs")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<List<AuditLog>>> getLogs() {
-        return ResponseEntity.ok(ApiResponse.ok("Audit logs", complianceServiceImpl.getAllLogs()));
+    @PreAuthorize("hasAnyRole('ADMIN', 'COMPLIANCE_OFFICER')")
+    public ResponseEntity<ApiResponse<List<AuditLog>>> getLogs(Authentication authentication) {
+        Long actorId = getAuthenticatedUserId(authentication);
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
+        List<AuditLog> logs = isAdmin
+                ? complianceServiceImpl.getAllLogs(actorId)
+                : complianceServiceImpl.getLogsByUser(actorId, actorId);
+        return ResponseEntity.ok(ApiResponse.ok("Audit logs", logs));
     }
 
     @GetMapping("/logs/user/{userId}")
     @PreAuthorize("hasRole('ADMIN') or #userId.toString() == authentication.name")
-    public ResponseEntity<ApiResponse<List<AuditLog>>> getLogsByUser(@PathVariable Long userId) {
+    public ResponseEntity<ApiResponse<List<AuditLog>>> getLogsByUser(@PathVariable Long userId, Authentication authentication) {
+        Long actorId = getAuthenticatedUserId(authentication);
         return ResponseEntity.ok(ApiResponse.ok("Logs for user " + userId,
-                complianceServiceImpl.getLogsByUser(userId)));
+                complianceServiceImpl.getLogsByUser(actorId, userId)));
     }
 }
 

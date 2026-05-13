@@ -65,7 +65,7 @@ public class NotificationController {
     }
 
     @GetMapping("/category/{category}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'COMPLIANCE_OFFICER', 'CITY_HEALTH_OFFICER')")
+        @PreAuthorize("hasAnyRole('ADMIN', 'COMPLIANCE_OFFICER')")
     public ResponseEntity<ApiResponse<List<Notification>>> getByCategory(
             @PathVariable Notification.Category category) {
         return ResponseEntity.ok(ApiResponse.ok("Notifications for category " + category,

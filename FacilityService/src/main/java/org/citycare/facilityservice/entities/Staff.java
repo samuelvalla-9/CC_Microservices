@@ -16,7 +16,7 @@ import lombok.*;
 public class Staff extends BaseEntity {
 
     public enum Role {
-        DOCTOR, NURSE, DISPATCHER, COMPLIANCE_OFFICER, HEALTH_OFFICER
+        DOCTOR, NURSE, DISPATCHER, COMPLIANCE_OFFICER
     }
 
     public enum Status {

@@ -28,11 +28,7 @@ public interface IamClient {
     @PostMapping("/admin/compliance-officers")
     ApiResponse<UserResponse> createComplianceAccount(@RequestBody StaffRequest request);
 
-    // 4. Health Officers
-    @PostMapping("/admin/health-officers")
-    ApiResponse<UserResponse> createHealthOfficerAccount(@RequestBody StaffRequest request);
-
-    // 5. Compensation for partial failures
+    // 4. Compensation for partial failures
     @PatchMapping("/admin/users/{id}/deactivate")
     ApiResponse<UserResponse> deactivateUser(@PathVariable("id") Long userId);
 

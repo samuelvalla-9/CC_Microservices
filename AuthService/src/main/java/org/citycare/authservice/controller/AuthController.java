@@ -91,13 +91,6 @@ public class AuthController {
                 .body(ApiResponse.ok("Compliance officer created", authService.createComplianceOfficer(request)));
     }
 
-    @PostMapping("/admin/health-officers")
-    @Operation(summary = "[ADMIN] Create City Health Officer account")
-    public ResponseEntity<ApiResponse<User>> createHealthOfficer(@Valid @RequestBody CreateStaffRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok("Health officer created", authService.createCityHealthOfficer(request)));
-    }
-
     // ── Admin: Users ──────────────────────────────────────────────────────────
 
     @GetMapping("/admin/users")

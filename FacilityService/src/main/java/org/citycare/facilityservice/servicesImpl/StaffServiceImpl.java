@@ -88,7 +88,6 @@ public class StaffServiceImpl implements StaffService {
                 case DOCTOR, NURSE -> iamClient.createStaffAccount(request);
                 case DISPATCHER -> iamClient.createDispatcherAccount(request);
                 case COMPLIANCE_OFFICER -> iamClient.createComplianceAccount(request);
-                case HEALTH_OFFICER -> iamClient.createHealthOfficerAccount(request);
                 default -> throw new IllegalArgumentException("Unsupported role for staff creation: " + request.getRole());
             };
             return iamResponse != null ? iamResponse.getData() : null;

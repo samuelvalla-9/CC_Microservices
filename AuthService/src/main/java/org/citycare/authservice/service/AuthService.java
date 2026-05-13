@@ -97,11 +97,6 @@ public class AuthService {
         return saveUser(req, User.Role.COMPLIANCE_OFFICER);
     }
 
-    public User createCityHealthOfficer(CreateStaffRequest req) {
-        validateUniqueEmail(req.getEmail());
-        return saveUser(req, User.Role.CITY_HEALTH_OFFICER);
-    }
-
     @Transactional
     protected User saveUser(CreateStaffRequest req, User.Role role) {
         User saved = userRepository.save(User.builder()
@@ -136,10 +131,6 @@ public class AuthService {
 
     public List<User> getAllComplianceOfficers() {
         return userRepository.findByRoleIn(List.of(User.Role.COMPLIANCE_OFFICER));
-    }
-
-    public List<User> getAllHealthOfficers() {
-        return userRepository.findByRoleIn(List.of(User.Role.CITY_HEALTH_OFFICER));
     }
 
     public List<User> getAllUsers() {
