@@ -73,7 +73,7 @@ public class StaffController {
     }
 
     @GetMapping("/facility/{facilityId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'NURSE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR')")
     public ResponseEntity<ApiResponse<List<StaffResponse>>> getByFacility(@PathVariable Long facilityId) {
         List<StaffResponse> data = staffService.getStaffByFacility(facilityId);
         return ResponseEntity.ok(ApiResponse.ok("Staff members for facility retrieved", data));

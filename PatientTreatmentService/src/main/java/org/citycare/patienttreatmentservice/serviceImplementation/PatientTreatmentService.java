@@ -278,9 +278,9 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
 
         // 3. Staff Role Validation
         String role = staff.getRole();
-        if (role == null || (!role.equalsIgnoreCase("DOCTOR") && !role.equalsIgnoreCase("NURSE"))) {
+        if (role == null || !role.equalsIgnoreCase("DOCTOR")) {
             log.warn("Unauthorized attempt by ID: {} with role: {}", assignedById, role);
-            throw new BadRequestException("Unauthorized: Only DOCTOR or NURSE can assign treatments. Current role: " + role);
+            throw new BadRequestException("Unauthorized: Only DOCTOR can assign treatments. Current role: " + role);
         }
 
         // 4. Create and Save Treatment

@@ -59,14 +59,14 @@ public class AuthController {
     // ── Admin: Staff ──────────────────────────────────────────────────────────
 
     @PostMapping("/admin/staff")
-    @Operation(summary = "[ADMIN] Create Doctor or Nurse account")
+    @Operation(summary = "[ADMIN] Create Doctor account")
     public ResponseEntity<ApiResponse<User>> createStaff(@Valid @RequestBody CreateStaffRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Staff created", authService.createStaff(request)));
     }
 
     @GetMapping("/admin/staff")
-    @Operation(summary = "[ADMIN] List all Doctors and Nurses")
+    @Operation(summary = "[ADMIN] List all Doctors")
     public ResponseEntity<ApiResponse<List<User>>> getAllStaff() {
         return ResponseEntity.ok(ApiResponse.ok("All staff", authService.getAllStaff()));
     }

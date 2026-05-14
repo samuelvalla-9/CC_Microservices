@@ -200,7 +200,7 @@ class PatientTreatmentServiceTest {
 
         assertThatThrownBy(() -> patientTreatmentService.addTreatment(req))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("DOCTOR or NURSE");
+                .hasMessageContaining("Only DOCTOR can assign treatments");
     }
 
     @Test

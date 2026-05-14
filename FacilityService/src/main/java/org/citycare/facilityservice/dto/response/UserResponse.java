@@ -14,7 +14,7 @@ public class UserResponse {
 
     private String email;   // To contact the staff member
 
-    private String role;    // To verify if they are DOCTOR, NURSE, etc.
+    private String role;    // To verify if they are DOCTOR, DISPATCHER, etc.
 
     private String phone;   // For emergency contact
 

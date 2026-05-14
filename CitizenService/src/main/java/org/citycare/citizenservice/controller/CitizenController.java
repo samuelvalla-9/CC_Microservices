@@ -59,7 +59,7 @@ public class CitizenController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'NURSE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR')")
     public ResponseEntity<ApiResponse<Citizen>> getById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok("Citizen details", citizenService.getById(id)));
     }

@@ -114,15 +114,11 @@ public class AuthService {
     }
 
     public List<User> getAllStaff() {
-        return userRepository.findByRoleIn(List.of(User.Role.DOCTOR, User.Role.NURSE));
+        return userRepository.findByRoleIn(List.of(User.Role.DOCTOR));
     }
 
     public List<User> getAllDoctors() {
         return userRepository.findByRoleIn(List.of(User.Role.DOCTOR));
-    }
-
-    public List<User> getAllNurses() {
-        return userRepository.findByRoleIn(List.of(User.Role.NURSE));
     }
 
     public List<User> getAllDispatchers() {

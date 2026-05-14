@@ -85,7 +85,7 @@ public class StaffServiceImpl implements StaffService {
     private UserResponse createOrResolveUser(StaffRequest request) {
         try {
             ApiResponse<UserResponse> iamResponse = switch (request.getRole()) {
-                case DOCTOR, NURSE -> iamClient.createStaffAccount(request);
+                case DOCTOR -> iamClient.createStaffAccount(request);
                 case DISPATCHER -> iamClient.createDispatcherAccount(request);
                 case COMPLIANCE_OFFICER -> iamClient.createComplianceAccount(request);
                 default -> throw new IllegalArgumentException("Unsupported role for staff creation: " + request.getRole());

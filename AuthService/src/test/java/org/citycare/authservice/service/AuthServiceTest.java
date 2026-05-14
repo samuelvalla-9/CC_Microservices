@@ -119,8 +119,8 @@ class AuthServiceTest {
     }
 
     @Test
-    void getAllStaff_returnsDoctorsAndNurses() {
-        when(userRepository.findByRoleIn(List.of(User.Role.DOCTOR, User.Role.NURSE)))
+    void getAllStaff_returnsDoctors() {
+        when(userRepository.findByRoleIn(List.of(User.Role.DOCTOR)))
                 .thenReturn(List.of(mockUser));
 
         List<User> staff = authService.getAllStaff();

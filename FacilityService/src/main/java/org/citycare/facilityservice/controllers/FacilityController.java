@@ -30,7 +30,7 @@ public class FacilityController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER', 'COMPLIANCE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'DISPATCHER', 'COMPLIANCE_OFFICER')")
     public ResponseEntity<ApiResponse<List<FacilityResponse>>> getAll() {
         List<FacilityResponse> data = facilityService.getAll();
         return ResponseEntity.ok(ApiResponse.ok("All facilities retrieved", data));
@@ -58,7 +58,7 @@ public class FacilityController {
     }
 
     @GetMapping("/{id}/staff")
-    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'NURSE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR')")
     public ResponseEntity<ApiResponse<List<StaffResponse>>> getStaff(@PathVariable Long id) {
         List<StaffResponse> data = facilityService.getStaffByFacility(id);
         return ResponseEntity.ok(ApiResponse.ok("Staff members for facility retrieved", data));

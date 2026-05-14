@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @FeignClient(name = "AUTHSERVICE")
 public interface IamClient {
 
-    // 1. Doctors and Nurses
+    // 1. Doctors
 
     @PostMapping("/admin/staff")
     ApiResponse<UserResponse> createStaffAccount(@RequestBody StaffRequest request);
