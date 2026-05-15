@@ -46,13 +46,13 @@ public class PatientTreatmentController {
     }
 
     @GetMapping("/patients/{id}")
-    @PreAuthorize("@patientSecurity.canAccessPatient(authentication, #id)")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR')")
     public ResponseEntity<ApiResponse<Patient>> getById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok("Patient", service.getPatientById(id)));
     }
 
     @PatchMapping("/patients/{id}/status")
-    @PreAuthorize("@patientSecurity.canAccessPatient(authentication, #id)")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR')")
     public ResponseEntity<ApiResponse<Patient>> updateStatus(
             @PathVariable Long id, @RequestParam Patient.Status status) {
         return ResponseEntity.ok(ApiResponse.ok("Status updated to " + status,
@@ -125,7 +125,7 @@ public class PatientTreatmentController {
     }
 
     @GetMapping("/patients/{id}/treatments")
-    @PreAuthorize("@patientSecurity.canAccessPatient(authentication, #id)")
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR')")
     public ResponseEntity<ApiResponse<List<Treatment>>> getByPatient(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok("Treatments for patient " + id,
                 service.getTreatmentsByPatient(id)));

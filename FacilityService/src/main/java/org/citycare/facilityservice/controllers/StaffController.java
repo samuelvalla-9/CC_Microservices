@@ -7,6 +7,8 @@ import org.citycare.facilityservice.dto.response.StaffResponse;
 import org.citycare.facilityservice.dto.response.ApiResponse;
 import org.citycare.facilityservice.entities.Staff;
 import org.citycare.facilityservice.services.StaffService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -20,6 +22,8 @@ import java.util.List;
 // --- Exception Handling for Validation and Not Found ---
 @RestControllerAdvice
 class StaffControllerAdvice {
+    private static final Logger log = LoggerFactory.getLogger(StaffControllerAdvice.class);
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<String>> handleValidation(MethodArgumentNotValidException ex) {
         String msg = ex.getBindingResult().getFieldErrors().stream()
@@ -40,7 +44,9 @@ class StaffControllerAdvice {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<String>> handleOther(Exception ex) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error("Internal error: " + ex.getMessage()));
+        log.error("Unhandled exception", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("An unexpected system error occurred."));
     }
 }
 

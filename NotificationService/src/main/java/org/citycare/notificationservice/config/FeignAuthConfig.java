@@ -14,7 +14,7 @@ import java.util.Date;
 
 /**
  * Generates a service-level JWT for internal Feign calls so that
- * NotificationService can call protected endpoints (e.g. /admin/users/by-role)
+ * NotificationService can call protected endpoints (e.g. /internal/users/by-role)
  * without relying on the end-user's token.
  */
 @Configuration

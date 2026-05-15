@@ -8,7 +8,6 @@ import org.citycare.notificationservice.feign.AuthClient;
 import org.citycare.notificationservice.repository.NotificationRepository;
 import org.citycare.notificationservice.service.EmailService;
 import org.citycare.notificationservice.service.NotificationService;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +21,6 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final EmailService emailService;
     private final AuthClient authClient;
-    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional
@@ -458,6 +456,20 @@ public class NotificationServiceImpl implements NotificationService {
             log.warn("Failed to resolve admins for document event: {}", e.getMessage());
         }
 
+        if (firstSaved == null) {
+            Notification fallback = Notification.builder()
+                    .userId(event.getCitizenId())
+                    .entityId(event.getDocumentId())
+                    .title(title)
+                    .message(message)
+                    .category(Notification.Category.COMPLIANCE)
+                    .channel(Notification.Channel.IN_APP)
+                    .status(Notification.NotificationStatus.UNREAD)
+                    .build();
+            firstSaved = saveAndPublish(fallback);
+            log.info("Document event fallback notification created for citizen #{}", event.getCitizenId());
+        }
+
         return firstSaved;
     }
 
@@ -468,17 +480,6 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private Notification saveAndPublish(Notification notification) {
-        Notification saved = notificationRepository.save(notification);
-        try {
-            messagingTemplate.convertAndSendToUser(
-                    String.valueOf(saved.getUserId()),
-                    "/queue/notifications",
-                    saved
-            );
-        } catch (Exception ex) {
-            log.warn("Failed to publish notification {} to websocket user {}: {}",
-                    saved.getNotificationId(), saved.getUserId(), ex.getMessage());
-        }
-        return saved;
+        return notificationRepository.save(notification);
     }
 }

@@ -22,9 +22,11 @@ import org.citycare.patienttreatmentservice.repository.TreatmentRepository;
 import org.citycare.patienttreatmentservice.service.PatientTreatmentInterface;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -117,17 +119,83 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
         return savedPatient;
     }
 
+    private boolean isDoctor(Authentication auth) {
+        return auth != null && auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_DOCTOR"::equals);
+    }
+
+    private Long getCurrentUserId(Authentication auth) {
+        if (auth == null || auth.getName() == null) {
+            throw new UnauthorizedException("User not authenticated");
+        }
+        try {
+            return Long.parseLong(auth.getName());
+        } catch (NumberFormatException ex) {
+            throw new UnauthorizedException("Invalid user identity in token");
+        }
+    }
+
+    private StaffResponse getStaffOrThrow(Long staffId) {
+        try {
+            ApiResponse<StaffResponse> response = staffClient.getStaffById(staffId);
+            if (response == null || response.getData() == null) {
+                throw new ResourceNotFoundException("Staff", staffId);
+            }
+            return response.getData();
+        } catch (feign.FeignException e) {
+            log.error("Feign error while fetching staff {}: {}", staffId, e.status());
+            if (e.status() == 404) {
+                throw new ResourceNotFoundException("Staff", staffId);
+            }
+            if (e.status() == 403) {
+                throw new UnauthorizedException("Access denied while validating staff.");
+            }
+            throw new RuntimeException("Facility Service error: " + e.status());
+        } catch (Exception e) {
+            log.error("Failed to fetch staff {}: {}", staffId, e.getMessage());
+            throw new RuntimeException("Could not validate staff. Facility Service might be down.");
+        }
+    }
+
+    private Long getCurrentDoctorFacilityId(Authentication auth) {
+        Long userId = getCurrentUserId(auth);
+        StaffResponse currentStaff = getStaffOrThrow(userId);
+        if (currentStaff.getFacilityId() == null) {
+            throw new BadRequestException("Doctor is not mapped to any facility.");
+        }
+        return currentStaff.getFacilityId();
+    }
+
+    private void ensureDoctorFacilityAccess(Authentication auth, Long targetFacilityId) {
+        if (!isDoctor(auth)) return;
+        Long doctorFacilityId = getCurrentDoctorFacilityId(auth);
+        if (targetFacilityId == null || !doctorFacilityId.equals(targetFacilityId)) {
+            throw new UnauthorizedException("Doctor can only access patients within assigned facility.");
+        }
+    }
+
     public List<Patient> getAllPatients() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (isDoctor(auth)) {
+            return patientRepository.findByFacilityId(getCurrentDoctorFacilityId(auth));
+        }
         return patientRepository.findAll();
     }
 
     public List<Patient> getPatientsByFacility(Long facilityId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        ensureDoctorFacilityAccess(auth, facilityId);
         return patientRepository.findByFacilityId(facilityId);
     }
 
     public Patient getPatientById(Long id) {
-        return patientRepository.findById(id)
+        Patient patient = patientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Patient", id));
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        ensureDoctorFacilityAccess(auth, patient.getFacilityId());
+        return patient;
     }
 
     @Transactional
@@ -199,18 +267,35 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
     }
 
     public List<Patient> getUnassignedPatients() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (isDoctor(auth)) {
+            return patientRepository.findByFacilityIdAndAssignedStaffIdIsNull(getCurrentDoctorFacilityId(auth));
+        }
         return patientRepository.findByAssignedStaffIdIsNull();
     }
 
     public List<Patient> getUnassignedPatientsByFacility(Long facilityId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        ensureDoctorFacilityAccess(auth, facilityId);
         return patientRepository.findByFacilityIdAndAssignedStaffIdIsNull(facilityId);
     }
 
     public List<Patient> getPatientsByDoctor(Long doctorId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (isDoctor(auth)) {
+            // New rule: doctors can view all patients in their facility, not only own assignments.
+            return patientRepository.findByFacilityId(getCurrentDoctorFacilityId(auth));
+        }
         return patientRepository.findByAssignedStaffId(doctorId);
     }
 
     public List<Patient> getPatientsByFacilityAndDoctor(Long facilityId, Long doctorId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (isDoctor(auth)) {
+            ensureDoctorFacilityAccess(auth, facilityId);
+            // New rule: doctors can view all patients in their facility, even if assigned to another doctor.
+            return patientRepository.findByFacilityId(facilityId);
+        }
         return patientRepository.findByFacilityIdAndAssignedStaffId(facilityId, doctorId);
     }
 
@@ -218,6 +303,10 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
 
     public List<Patient> getPatientsByStatus(Patient.Status status) {
         log.info("Fetching patients with status: {}", status);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (isDoctor(auth)) {
+            return patientRepository.findByFacilityIdAndStatus(getCurrentDoctorFacilityId(auth), status);
+        }
         return patientRepository.findByStatus(status);
     }
 
@@ -228,8 +317,7 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
         if (auth == null || !auth.isAuthenticated()) {
             throw new UnauthorizedException("User not authenticated");
         }
-        Long assignedById = Long.parseLong(auth.getName());
-        System.out.println("assignedById: " + assignedById);
+        Long assignedById = getCurrentUserId(auth);
         log.info("Attempting to add treatment for Patient ID: {} by Staff ID: {}", req.getPatientId(), assignedById);
 
         // 1. Fetch Patient and Validate Status
@@ -242,39 +330,8 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
         }
 
         // 2. Fetch Staff via Feign Client with Precise Error Handling
-        StaffResponse staff;
-        try {
-            ApiResponse<StaffResponse> response = staffClient.getStaffById(assignedById);
-
-            // Service response ichi, andulo data lekapothe (Internal logic failure)
-            if (response == null || response.getData() == null) {
-                throw new ResourceNotFoundException("Staff", assignedById);
-            }
-
-            staff = response.getData();
-            log.info("Validated Staff: {} | Role: {}", staff.getName(), staff.getRole());
-
-        } catch (feign.FeignException e) {
-            // IKKADA LOGIC: Feign 404 (Not Found) thitithe kachitanga Staff ledhane ardham
-            log.error("Feign Error Status: {} for Staff ID: {}", e.status(), assignedById);
-
-            if (e.status() == 404) {
-                throw new ResourceNotFoundException("Staff", assignedById);
-            }
-
-            // Okavela 403 Forbidden vasthe
-            if (e.status() == 403) {
-                throw new BadRequestException("Access Denied: Security blocked the call to Facility Service.");
-            }
-
-            // Vere emi service error vachina (500, etc)
-            throw new RuntimeException("Facility Service error: " + e.status());
-
-        } catch (Exception e) {
-            // Asalu connection-ey lekapothe (Service down) idi trigger avthundi
-            log.error("General Exception during staff validation: {}", e.getMessage());
-            throw new RuntimeException("Could not validate staff. Facility Service might be down.");
-        }
+        StaffResponse staff = getStaffOrThrow(assignedById);
+        log.info("Validated Staff: {} | Role: {}", staff.getName(), staff.getRole());
 
         // 3. Staff Role Validation
         String role = staff.getRole();
@@ -283,12 +340,21 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
             throw new BadRequestException("Unauthorized: Only DOCTOR can assign treatments. Current role: " + role);
         }
 
+        if (patient.getFacilityId() == null || staff.getFacilityId() == null
+                || !patient.getFacilityId().equals(staff.getFacilityId())) {
+            throw new UnauthorizedException("Doctor can only add treatment for patients in the same assigned facility.");
+        }
+
         // 4. Create and Save Treatment
-        // Assign the patient to this staff if not already assigned
+        // Assign the patient to this staff if not already assigned.
+        // If already assigned to another doctor, only visibility is allowed, not treatment creation.
         if (patient.getAssignedStaffId() == null) {
             patient.setAssignedStaffId(assignedById);
             patientRepository.save(patient);
             log.info("Patient {} assigned to Staff ID: {}", patient.getPatientId(), assignedById);
+        } else if (!patient.getAssignedStaffId().equals(assignedById)) {
+            throw new UnauthorizedException(
+                    "Patient is assigned to another doctor. You can view patient details but cannot add treatment.");
         }
 
         Treatment treatment = Treatment.builder()
@@ -316,15 +382,24 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
         return savedTreatment;
     }
     public List<Treatment> getTreatmentsByPatient(Long patientId) {
-        if (!patientRepository.existsById(patientId)) {
-            throw new ResourceNotFoundException("Patient", patientId);
-        }
+        // Reuse existing secured patient fetch so doctor access is facility-scoped.
+        getPatientById(patientId);
         return treatmentRepository.findByPatientPatientId(patientId);
     }
 
     public Treatment getTreatmentById(Long id) {
-        return treatmentRepository.findById(id)
+        Treatment treatment = treatmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Treatment", id));
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (isDoctor(auth)) {
+            Long doctorFacilityId = getCurrentDoctorFacilityId(auth);
+            Long treatmentFacilityId = treatment.getPatient() != null ? treatment.getPatient().getFacilityId() : null;
+            if (treatmentFacilityId == null || !doctorFacilityId.equals(treatmentFacilityId)) {
+                throw new UnauthorizedException("Doctor can only access treatments within assigned facility.");
+            }
+        }
+        return treatment;
     }
 //    @Transactional
 //    public Treatment updateTreatmentStatus(Long id, Treatment.Status status) {
@@ -367,6 +442,20 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
         Treatment treatment = treatmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Treatment", id));
 
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (isDoctor(auth)) {
+            Long currentDoctorId = getCurrentUserId(auth);
+            Long doctorFacilityId = getCurrentDoctorFacilityId(auth);
+            Long treatmentFacilityId = treatment.getPatient() != null ? treatment.getPatient().getFacilityId() : null;
+
+            if (treatmentFacilityId == null || !doctorFacilityId.equals(treatmentFacilityId)) {
+                throw new UnauthorizedException("Doctor can only update treatments within assigned facility.");
+            }
+            if (!currentDoctorId.equals(treatment.getAssignedById())) {
+                throw new UnauthorizedException("Only the assigned doctor can update this treatment.");
+            }
+        }
+
         // 2. Business Logic: Finalized Status Check
         // Treatment already COMPLETED leda CANCELLED ayithe, inka marchanivvakudadu
         if (treatment.getStatus() == Treatment.Status.COMPLETED ||
@@ -400,6 +489,10 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
     }
     @Transactional(readOnly = true)
     public List<Treatment> getAllTreatments() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (isDoctor(auth)) {
+            return treatmentRepository.findByPatientFacilityId(getCurrentDoctorFacilityId(auth));
+        }
         return treatmentRepository.findAll();
     }
 
@@ -412,7 +505,8 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
         // Oka vela strict ga staff existence check cheyalante userClient call cheyali.
         try {
             ResponseEntity<ApiResponse<UserResponse>> staffResponse = userClient.getUserById(staffId);
-            if (staffResponse.getBody() == null || staffResponse.getBody().getData() == null) {
+            ApiResponse<UserResponse> body = staffResponse.getBody();
+            if (body == null || body.getData() == null) {
                 throw new ResourceNotFoundException("Staff", staffId);
             }
         } catch (Exception e) {
@@ -422,6 +516,11 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
         try {
             // 2. Database nunchi treatments list tevali
             List<Treatment> treatments = treatmentRepository.findByAssignedById(staffId);
+
+            if (CollectionUtils.isEmpty(treatments)) {
+                log.info("No treatments found for staff ID: {}", staffId);
+                return new ArrayList<>();
+            }
 
             // 3. Result list create cheyali
             List<TreatmentSummaryResponse> responseList = new ArrayList<>();
@@ -456,10 +555,18 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
         log.info("Fetching treatments from DB for assignedById: {}", doctorId);
 
         // 1. Database nundi direct ga list techi
-        List<Treatment> treatments = treatmentRepository.findByAssignedById(doctorId);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        List<Treatment> treatments;
+        if (isDoctor(auth)) {
+            Long doctorFacilityId = getCurrentDoctorFacilityId(auth);
+            treatments = treatmentRepository.findByAssignedByIdAndPatientFacilityId(doctorId, doctorFacilityId);
+        } else {
+            treatments = treatmentRepository.findByAssignedById(doctorId);
+        }
 
-        if (treatments.isEmpty()) {
+        if (CollectionUtils.isEmpty(treatments)) {
             log.warn("No treatments found for Doctor ID: {}", doctorId);
+            return new ArrayList<>();
         }
 
         // 2. DTO loki mapping (Extra API calls lekunda)

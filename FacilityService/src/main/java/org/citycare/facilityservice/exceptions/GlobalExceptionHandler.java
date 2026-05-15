@@ -2,6 +2,8 @@ package org.citycare.facilityservice.exceptions;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import org.citycare.facilityservice.dto.response.ApiResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -16,6 +18,8 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     // 1. Handles @Valid failures (Regex, Email, Size, etc.)
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -77,9 +81,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(feign.FeignException.class)
     public ResponseEntity<ApiResponse<String>> handleFeignException(feign.FeignException ex) {
         // This catches errors coming from the AuthService (like 400, 401, 500)
+        log.warn("Downstream service error from Feign client: status={}, message={}", ex.status(), ex.getMessage());
         return new ResponseEntity<>(
-                ApiResponse.error("Auth Service Error: " + ex.getMessage()),
+            ApiResponse.error("Downstream service error"),
                 HttpStatus.valueOf(ex.status() > 0 ? ex.status() : 500)
         );
     }
+
+        @ExceptionHandler(Exception.class)
+        public ResponseEntity<ApiResponse<String>> handleGeneric(Exception ex) {
+        log.error("Unhandled exception", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(ApiResponse.error("An unexpected system error occurred."));
+        }
 }

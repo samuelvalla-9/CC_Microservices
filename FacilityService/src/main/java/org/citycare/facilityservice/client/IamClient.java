@@ -35,6 +35,6 @@ public interface IamClient {
     @DeleteMapping("/admin/users/{id}")
     ApiResponse<Void> deleteUser(@PathVariable("id") Long userId);
 
-    @GetMapping("/admin/users/by-email")
+    @GetMapping("/internal/users/by-email")
     ApiResponse<UserResponse> getUserByEmail(@RequestParam("email") String email);
 }

@@ -15,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -45,7 +46,7 @@ public class AuthController {
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> new UsernameNotFoundException("No account found with this email"));
 
         String token = authentication.isAuthenticated() ? jwtService.generateToken(user) : null;
 
@@ -105,13 +106,13 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok("User", authService.getUserById(id)));
     }
 
-    @GetMapping("/admin/users/by-role")
+    @GetMapping({"/admin/users/by-role", "/internal/users/by-role"})
     @Operation(summary = "[INTERNAL] Get users by role - used by other services")
     public ResponseEntity<List<User>> getUsersByRole(@RequestParam("role") String role) {
         return ResponseEntity.ok(authService.getUsersByRole(role));
     }
 
-    @GetMapping("/admin/users/by-email")
+    @GetMapping({"/admin/users/by-email", "/internal/users/by-email"})
     @Operation(summary = "[INTERNAL] Get user by email - used for staff reconciliation")
     public ResponseEntity<ApiResponse<User>> getUserByEmail(@RequestParam("email") String email) {
         return ResponseEntity.ok(ApiResponse.ok("User", authService.getUserByEmail(email)));
@@ -136,15 +137,14 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok("User removed", null));
     }
 
-
-    @PutMapping("/users/{id}/profile")
+    @PutMapping({"/users/{id}/profile", "/internal/users/{id}/profile"})
     @PreAuthorize("hasAnyRole('ADMIN', 'CITIZEN')")
-    public ResponseEntity<Void> updateUserProfile(
+    public ResponseEntity<ApiResponse<Void>> updateUserProfile(
             @PathVariable Long id,
             @RequestBody @Valid UserProfileUpdateRequest request) {
 
         authService.updateUserProfile(id, request);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(ApiResponse.ok("User profile updated", null));
     }
 
 }

@@ -11,6 +11,7 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     Optional<Patient> findByEmergencyId(Long emergencyId);
     List<Patient> findByCitizenId(Long citizenId);
     List<Patient> findByStatus(Patient.Status status);
+    List<Patient> findByFacilityIdAndStatus(Long facilityId, Patient.Status status);
     List<Patient> findByFacilityId(Long facilityId);
     List<Patient> findByAssignedStaffId(Long assignedStaffId);
     List<Patient> findByFacilityIdAndAssignedStaffIdIsNull(Long facilityId);

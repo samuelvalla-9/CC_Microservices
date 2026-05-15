@@ -9,6 +9,7 @@ import org.citycare.authservice.exception.EmailAlreadyRegisteredException;
 import org.citycare.authservice.exception.PhoneAlreadyRegisteredException;
 import org.citycare.authservice.exception.ResourceNotFoundException;
 import org.citycare.authservice.feign.CitizenClient;
+import org.citycare.authservice.feign.FacilityClient;
 import org.citycare.authservice.feign.NotificationClient;
 import org.citycare.authservice.feign.dto.CitizenCreateRequest;
 import org.citycare.authservice.repository.UserRepository;
@@ -33,6 +34,7 @@ public class AuthService {
     // OpenFeign: auto-create citizen profile after citizen registration
     private final CitizenClient citizenClient;
     private final NotificationClient notificationClient;
+    private final FacilityClient facilityClient;
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -156,6 +158,7 @@ public class AuthService {
         user.setStatus(User.Status.INACTIVE);
         User saved = userRepository.save(user);
         userRepository.flush();
+        syncStaffStatusIfApplicable(saved, "INACTIVE");
         log.info("User {} deactivated. New status: {}", saved.getEmail(), saved.getStatus());
         return saved;
     }
@@ -168,8 +171,23 @@ public class AuthService {
         user.setStatus(User.Status.ACTIVE);
         User saved = userRepository.save(user);
         userRepository.flush();
+        syncStaffStatusIfApplicable(saved, "ACTIVE");
         log.info("User {} activated. New status: {}", saved.getEmail(), saved.getStatus());
         return saved;
+    }
+
+    private void syncStaffStatusIfApplicable(User user, String status) {
+        if (user.getRole() != User.Role.DOCTOR && user.getRole() != User.Role.DISPATCHER) {
+            return;
+        }
+
+        try {
+            facilityClient.updateStaffStatus(user.getUserId(), status);
+            log.info("Synced staff status={} for userId={} role={}", status, user.getUserId(), user.getRole());
+        } catch (Exception ex) {
+            log.warn("Failed to sync staff status={} for userId={} role={}: {}",
+                    status, user.getUserId(), user.getRole(), ex.getMessage());
+        }
     }
 
     @Transactional

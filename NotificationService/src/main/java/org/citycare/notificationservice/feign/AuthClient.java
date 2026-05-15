@@ -9,7 +9,7 @@ import java.util.List;
 @FeignClient(name = "AUTHSERVICE", fallback = AuthClientFallback.class)
 public interface AuthClient {
 
-    @GetMapping("/admin/users/by-role")
+    @GetMapping("/internal/users/by-role")
     List<UserResponse> getUsersByRole(@RequestParam("role") String role);
 
     record UserResponse(Long id, String name, String email, String role) {}
