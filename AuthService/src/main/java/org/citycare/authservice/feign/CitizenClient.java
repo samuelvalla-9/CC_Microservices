@@ -13,6 +13,6 @@ public interface CitizenClient {
      * Called after a new CITIZEN user registers — auto-creates a citizen profile
      * in citizen-service via OpenFeign.
      */
-    @PostMapping("/citizens/internal/create")
+    @PostMapping("/api/citizens/internal/create")
     CitizenResponse createCitizenProfile(@RequestBody CitizenCreateRequest request);
 }

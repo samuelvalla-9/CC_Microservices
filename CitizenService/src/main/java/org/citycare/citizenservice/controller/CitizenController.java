@@ -3,7 +3,6 @@ package org.citycare.citizenservice.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.citycare.citizenservice.dto.request.CitizenCreateRequest;
 import org.citycare.citizenservice.dto.request.CitizenProfileRequest;
 import org.citycare.citizenservice.dto.response.ApiResponse;
 import org.citycare.citizenservice.dto.response.CitizenDocumentResponse;
@@ -152,21 +151,6 @@ public class CitizenController {
     @PreAuthorize("isAuthenticated()")
     public boolean isCitizenVerified(@PathVariable Long id) {
         return citizenService.isCitizenDocumentVerified(id);
-    }
-
-    @PostMapping("/internal/create")
-    public CitizenResponse createCitizenFromRegistration(@RequestBody CitizenCreateRequest request) {
-        Citizen citizen = citizenService.createCitizenFromRegistration(
-            request.getUserId(),
-            request.getName(),
-            request.getContactInfo()
-        );
-        return CitizenResponse.builder()
-            .citizenId(citizen.getCitizenId())
-            .name(citizen.getName())
-            .contactInfo(citizen.getContactInfo())
-            .status(citizen.getStatus().name())
-            .build();
     }
 
     private boolean isAdmin() {

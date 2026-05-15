@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
  * These are NOT exposed to external clients (protected by API gateway routing rules).
  */
 @RestController
-@RequestMapping("/citizens/internal")
+@RequestMapping("/api/citizens/internal")
 @RequiredArgsConstructor
 public class InternalCitizenController {
 

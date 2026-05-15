@@ -26,7 +26,7 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Allow unauthenticated bootstrap create calls from auth-service.
-                        .requestMatchers("/api/citizens/internal/create", "/citizens/internal/create").permitAll()
+                    .requestMatchers("/api/citizens/internal/create").permitAll()
                         // Everything else requires authentication (enforced by gateway + @PreAuthorize)
                         .anyRequest().authenticated()
                 )
