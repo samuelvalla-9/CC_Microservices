@@ -60,13 +60,6 @@ spring:
           predicates:
             - Path=/auth/**, /admin/**, /users/**
 
-        - id: NOTIFICATIONSERVICE
-          uri: lb://NOTIFICATIONSERVICE
-          predicates:
-            - Path=/notifications/**
-          filters:
-            - JwtAuthFilter
-
 eureka:
   client:
     service-url:

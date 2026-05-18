@@ -8,7 +8,6 @@ import org.citycare.complianceservice.entity.ComplianceRecord;
 import org.citycare.complianceservice.exception.ResourceNotFoundException;
 import org.citycare.complianceservice.feign.EmergencyClient;
 import org.citycare.complianceservice.feign.FacilityClient;
-import org.citycare.complianceservice.feign.NotificationClient;
 import org.citycare.complianceservice.feign.PatientClient;
 import org.citycare.complianceservice.repository.AuditLogRepository;
 import org.citycare.complianceservice.repository.AuditRepository;
@@ -37,7 +36,6 @@ class ComplianceServiceImplTest {
     @Mock FacilityClient facilityClient;
     @Mock PatientClient patientClient;
     @Mock EmergencyClient emergencyClient;
-    @Mock NotificationClient notificationClient;
 
     @InjectMocks ComplianceServiceImpl complianceService;
 

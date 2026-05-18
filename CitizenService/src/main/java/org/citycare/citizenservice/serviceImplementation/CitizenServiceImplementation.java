@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.citycare.citizenservice.exception.ResourceNotFoundException;
 import org.citycare.citizenservice.feign.AuthClient;
-import org.citycare.citizenservice.feign.NotificationClient;
 import org.citycare.citizenservice.repository.CitizenDocumentRepository;
 import org.citycare.citizenservice.repository.CitizenRepository;
 import org.citycare.citizenservice.service.CitizenService;
@@ -32,7 +31,6 @@ public class CitizenServiceImplementation implements CitizenService {
     private final CitizenRepository citizenRepository;
     private final CitizenDocumentRepository documentRepository;
     private final AuthClient authClient;
-    private final NotificationClient notificationClient;
 
     // ── Called by auth-service via OpenFeign on citizen registration ──────────
 
@@ -178,19 +176,6 @@ public class CitizenServiceImplementation implements CitizenService {
 
         CitizenDocument saved = documentRepository.save(doc);
 
-        // Notify admins via NotificationService event endpoint (it resolves admin users internally)
-        try {
-            notificationClient.documentEvent(Map.of(
-                    "documentId", saved.getDocumentId(),
-                    "citizenId", citizenId,
-                    "citizenName", citizen.getName(),
-                    "eventType", "DOCUMENT_UPLOADED"
-            ));
-            log.info("Sent document upload event for citizen #{}", citizenId);
-        } catch (Exception e) {
-            log.warn("Failed to send document upload event: {}", e.getMessage());
-        }
-
         return saved;
     }
 
@@ -207,25 +192,6 @@ public class CitizenServiceImplementation implements CitizenService {
                 .orElseThrow(() -> new ResourceNotFoundException("Document", documentId));
 
         doc.setVerificationStatus(status);
-
-        // Notify the citizen about their document verification result
-        try {
-            Long citizenId = doc.getCitizen().getCitizenId();
-            String statusMessage = status == CitizenDocument.VerificationStatus.VERIFIED
-                    ? "Your document has been verified. You can now report emergencies."
-                    : "Your document has been rejected. Please upload a valid document to report emergencies.";
-
-            notificationClient.createNotification(Map.of(
-                    "userId", citizenId,
-                    "entityId", doc.getDocumentId(),
-                    "title", "Document " + status.name(),
-                    "message", statusMessage,
-                    "category", "EMERGENCY"
-            ));
-            log.info("Notified citizen #{} about document {} status: {}", citizenId, documentId, status);
-        } catch (Exception e) {
-            log.warn("Failed to notify citizen about document verification: {}", e.getMessage());
-        }
 
         return CitizenDocumentResponse.builder()
                 .documentId(doc.getDocumentId())

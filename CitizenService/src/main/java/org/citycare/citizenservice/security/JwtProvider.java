@@ -1,45 +1,35 @@
 package org.citycare.citizenservice.security;
 
 import io.jsonwebtoken.Claims;
-import lombok.RequiredArgsConstructor;
-import org.citycare.security.jwt.JwtClaimsSupport;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
 import java.util.Date;
 
-/**
- * CitizenService's JWT provider wrapper.
- *
- * Delegates token parsing to centralized JwtClaimsSupport from jwt-shared-utils,
- * ensuring consistent cryptography across all services.
- */
 @Component
-@RequiredArgsConstructor
 public class JwtProvider {
 
     @Value("${jwt.secret}")
     private String secret;
 
-    /**
-     * Extract all claims from a JWT token.
-     *
-     * Uses JwtClaimsSupport for consistent, tested parsing logic.
-     *
-     * @param token JWT token
-     * @return Parsed claims
-     */
     public Claims getClaims(String token) {
-        return JwtClaimsSupport.parseClaims(token, secret);
+        return Jwts.parser()
+                .verifyWith(getSignKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
-    /**
-     * Check if a token is expired.
-     *
-     * @param claims Token claims
-     * @return True if token expiration date is before now
-     */
     public boolean isTokenExpired(Claims claims) {
         return claims.getExpiration().before(new Date());
+    }
+
+    private SecretKey getSignKey() {
+        byte[] keyBytes = Decoders.BASE64URL.decode(secret);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 }

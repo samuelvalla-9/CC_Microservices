@@ -10,7 +10,6 @@ import org.citycare.authservice.exception.PhoneAlreadyRegisteredException;
 import org.citycare.authservice.exception.ResourceNotFoundException;
 import org.citycare.authservice.feign.CitizenClient;
 import org.citycare.authservice.feign.FacilityClient;
-import org.citycare.authservice.feign.NotificationClient;
 import org.citycare.authservice.feign.dto.CitizenCreateRequest;
 import org.citycare.authservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +32,6 @@ public class AuthService {
 
     // OpenFeign: auto-create citizen profile after citizen registration
     private final CitizenClient citizenClient;
-    private final NotificationClient notificationClient;
     private final FacilityClient facilityClient;
 
     public AuthResponse register(RegisterRequest request) {
@@ -75,12 +73,6 @@ public class AuthService {
             log.error("Could not auto-create citizen profile for userId={}: {}", savedUser.getUserId(), e.getMessage());
         }
 
-        try {
-            sendAuthEventAsync(savedUser);
-        } catch (Exception ignored) {
-            // Non-blocking by design
-        }
-
         return mapToResponse(savedUser);
     }
 
@@ -106,7 +98,6 @@ public class AuthService {
                 .password(passwordEncoder.encode(req.getPassword()))
                 .phone(req.getPhone()).role(role)
                 .status(User.Status.ACTIVE).build());
-        sendAuthEventAsync(saved);
         return saved;
     }
 
@@ -214,22 +205,6 @@ public class AuthService {
         if (userRepository.existsByEmail(email)) {
             throw new EmailAlreadyRegisteredException(email);
         }
-    }
-
-    private void sendAuthEventAsync(User user) {
-        CompletableFuture.runAsync(() -> {
-            try {
-                notificationClient.sendAuthEvent(new NotificationClient.AuthEventPayload(
-                        user.getUserId(),
-                        user.getName(),
-                        user.getRole().name(),
-                        "USER_REGISTERED",
-                        user.getEmail()
-                ));
-            } catch (Exception e) {
-                log.warn("Could not send staff registration notification", e);
-            }
-        });
     }
 
 

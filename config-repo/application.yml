@@ -4,7 +4,7 @@
 spring:
   datasource:
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:root}
+    password: ${DB_PASSWORD:Ishwa6604.}
 
 management:
   endpoints:

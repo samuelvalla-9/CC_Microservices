@@ -1,8 +1,12 @@
 package org.citycare.apigateway.filter;
 
-import org.citycare.security.jwt.JwtClaimsSupport;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import javax.crypto.SecretKey;
 
 @Component
 public class JwtUtil {
@@ -11,6 +15,19 @@ public class JwtUtil {
     private String secret;
 
     public boolean validateToken(String token) {
-        return JwtClaimsSupport.validateToken(token, secret);
+        try {
+            Jwts.parser()
+                .verifyWith(getSignKey())
+                .build()
+                .parseSignedClaims(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private SecretKey getSignKey() {
+        byte[] keyBytes = Decoders.BASE64URL.decode(secret);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 }

@@ -14,7 +14,6 @@ import org.citycare.emergencyservice.exception.ResourceNotFoundException;
 //import org.citycare.emergencyservice.feign.CitizenClient;
 //import org.citycare.emergencyservice.feign.dto.CitizenResponse;
 import org.citycare.emergencyservice.feign.CitizenClient;
-import org.citycare.emergencyservice.feign.NotificationClient;
 import org.citycare.emergencyservice.feign.StaffClient;
 import org.citycare.emergencyservice.feign.dto.CitizenResponse;
 import org.citycare.emergencyservice.feign.dto.StaffResponse;
@@ -29,7 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -40,7 +38,6 @@ public class EmergencyServiceImpl implements EmergencyService{
     private final EmergencyRepository emergencyRepository;
     private final AmbulanceRepository ambulanceRepository;
     private final CitizenClient citizenClient;
-    private final NotificationClient notificationClient;
     private final StaffClient staffClient;
 
 
@@ -92,17 +89,6 @@ public class EmergencyServiceImpl implements EmergencyService{
                 .build();
 
         Emergency saved = emergencyRepository.save(emergency);
-        CompletableFuture.runAsync(() -> {
-            try {
-                String email = citizen.getContactInfo();
-                notificationClient.sendEmergencyEvent(new NotificationClient.EmergencyEventPayload(
-                    saved.getEmergencyId(), saved.getCitizenId(), saved.getType().name(),
-                    saved.getLocation(), null, "REPORTED", null, email
-                ));
-            } catch (Exception e) {
-                log.warn("Could not send emergency reported notification", e);
-            }
-        });
         return saved;
     }
     @Override
@@ -135,16 +121,6 @@ public class EmergencyServiceImpl implements EmergencyService{
         emergency.setAmbulance(ambulance);
         emergency.setDispatchedAt(LocalDateTime.now());
         Emergency saved = emergencyRepository.save(emergency);
-        try {
-            String email = null;
-            try { email = citizenClient.getById(saved.getCitizenId()).getContactInfo(); } catch (Exception ignored) {}
-            notificationClient.sendEmergencyEvent(new NotificationClient.EmergencyEventPayload(
-                saved.getEmergencyId(), saved.getCitizenId(), saved.getType().name(),
-                saved.getLocation(), dispatcherId, "DISPATCHED", null, email
-            ));
-        } catch (Exception e) {
-            log.warn("Could not send ambulance dispatched notification", e);
-        }
         return saved;
     }
 

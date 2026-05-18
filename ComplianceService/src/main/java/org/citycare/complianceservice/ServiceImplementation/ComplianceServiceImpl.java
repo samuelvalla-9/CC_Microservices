@@ -8,7 +8,6 @@ import org.citycare.complianceservice.entity.ComplianceRecord;
 import org.citycare.complianceservice.exception.ResourceNotFoundException;
 import org.citycare.complianceservice.feign.EmergencyClient;
 import org.citycare.complianceservice.feign.FacilityClient;
-import org.citycare.complianceservice.feign.NotificationClient;
 import org.citycare.complianceservice.feign.PatientClient;
 import org.citycare.complianceservice.repository.AuditLogRepository;
 import org.citycare.complianceservice.repository.AuditRepository;
@@ -35,7 +34,6 @@ public class ComplianceServiceImpl implements org.citycare.complianceservice.ser
     private final FacilityClient facilityClient;
     private final PatientClient patientClient;
     private final EmergencyClient emergencyClient;
-    private final NotificationClient notificationClient;
 
     // ── Compliance Records ────────────────────────────────────────────────────
 
@@ -54,21 +52,11 @@ public class ComplianceServiceImpl implements org.citycare.complianceservice.ser
                 .build();
         ComplianceRecord saved = recordRepository.save(record);
         logAction(officerId, "CREATE_COMPLIANCE_RECORD", "compliance_records/" + saved.getComplianceId());
-        try {
-            notificationClient.sendComplianceEvent(new NotificationClient.ComplianceEventPayload(
-                saved.getComplianceId(), saved.getEntityId(), saved.getType().name(),
-                saved.getResult() != null ? saved.getResult().name() : null,
-                "RECORD_CREATED", officerId, saved.getNotes(), null
-            ));
-        } catch (Exception e) {
-            log.warn("Could not send compliance record created notification", e);
-        }
         return saved;
     }
 
     public List<ComplianceRecord> getAllRecords(Long actorId) {
         List<ComplianceRecord> records = recordRepository.findAll();
-        logAction(actorId, "LIST_COMPLIANCE_RECORDS", "compliance_records");
         return records;
     }
 
@@ -76,19 +64,16 @@ public class ComplianceServiceImpl implements org.citycare.complianceservice.ser
         Objects.requireNonNull(id, "id must not be null");
         ComplianceRecord record = recordRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("ComplianceRecord", id));
-        logAction(actorId, "VIEW_COMPLIANCE_RECORD", "compliance_records/" + id);
         return record;
     }
 
     public List<ComplianceRecord> getRecordsByEntity(Long actorId, Long entityId) {
         List<ComplianceRecord> records = recordRepository.findByEntityId(entityId);
-        logAction(actorId, "LIST_COMPLIANCE_RECORDS_BY_ENTITY", "compliance_records/entity/" + entityId);
         return records;
     }
 
     public List<ComplianceRecord> getRecordsByType(Long actorId, ComplianceRecord.EntityType type) {
         List<ComplianceRecord> records = recordRepository.findByType(type);
-        logAction(actorId, "LIST_COMPLIANCE_RECORDS_BY_TYPE", "compliance_records/type/" + type.name());
         return records;
     }
 
@@ -105,20 +90,11 @@ public class ComplianceServiceImpl implements org.citycare.complianceservice.ser
                 .build();
         Audit saved = auditRepository.save(audit);
         logAction(officerId, "CREATE_AUDIT", "audits/" + saved.getAuditId());
-        try {
-            notificationClient.sendComplianceEvent(new NotificationClient.ComplianceEventPayload(
-                null, null, null, null,
-                "AUDIT_CREATED", officerId, req.getFindings(), null
-            ));
-        } catch (Exception e) {
-            log.warn("Could not send audit created notification", e);
-        }
         return saved;
     }
 
     public List<Audit> getAllAudits(Long actorId) {
         List<Audit> audits = auditRepository.findAll();
-        logAction(actorId, "LIST_AUDITS", "audits");
         return audits;
     }
 
@@ -126,7 +102,6 @@ public class ComplianceServiceImpl implements org.citycare.complianceservice.ser
         Objects.requireNonNull(id, "id must not be null");
         Audit audit = auditRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Audit", id));
-        logAction(actorId, "VIEW_AUDIT", "audits/" + id);
         return audit;
     }
 
@@ -146,13 +121,11 @@ public class ComplianceServiceImpl implements org.citycare.complianceservice.ser
 
     public List<AuditLog> getAllLogs(Long actorId) {
         List<AuditLog> logs = auditLogRepository.findAll();
-        logAction(actorId, "LIST_AUDIT_LOGS", "audit_logs");
         return logs;
     }
 
     public List<AuditLog> getLogsByUser(Long actorId, Long userId) {
         List<AuditLog> logs = auditLogRepository.findByUserId(userId);
-        logAction(actorId, "LIST_AUDIT_LOGS_BY_USER", "audit_logs/user/" + userId);
         return logs;
     }
 

@@ -37,9 +37,18 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency> <!-- JJWT for validating JWT in the gateway filter -->
         <dependency>
-            <groupId>org.citycare</groupId>
-            <artifactId>jwt-shared-utils</artifactId>
-            <version>${project.parent.version}</version>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>

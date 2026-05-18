@@ -1,7 +1,6 @@
 package org.citycare.facilityservice.servicesImpl;
 
 import lombok.extern.slf4j.Slf4j;
-import org.citycare.facilityservice.client.NotificationClient;
 import org.citycare.facilityservice.dto.request.FacilityRequest;
 import org.citycare.facilityservice.dto.response.FacilityResponse;
 import org.citycare.facilityservice.dto.response.StaffResponse;
@@ -25,7 +24,6 @@ public class FacilityServiceImpl implements FacilityService {
 
     private final FacilityRepository facilityRepository;
     private final StaffRepository staffRepository;
-    private final NotificationClient notificationClient;
 
     @Override
     @Transactional
@@ -38,14 +36,6 @@ public class FacilityServiceImpl implements FacilityService {
                 .status(req.getStatus() != null ? req.getStatus() : Facility.Status.ACTIVE)
                 .build();
         FacilityResponse saved = mapToResponse(facilityRepository.save(facility));
-        try {
-            notificationClient.sendFacilityEvent(new NotificationClient.FacilityEventPayload(
-                saved.getFacilityId(), saved.getName(), "FACILITY_ADDED",
-                null, null, null, null, null, null
-            ));
-        } catch (Exception e) {
-            log.warn("Could not send facility added notification", e);
-        }
         return saved;
     }
 

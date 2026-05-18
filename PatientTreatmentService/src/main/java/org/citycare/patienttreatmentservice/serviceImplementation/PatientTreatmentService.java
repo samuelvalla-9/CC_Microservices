@@ -14,7 +14,6 @@ import org.citycare.patienttreatmentservice.exception.ResourceNotFoundException;
 import org.citycare.patienttreatmentservice.exception.UnauthorizedException;
 import org.citycare.patienttreatmentservice.feign.CitizenClient;
 import org.citycare.patienttreatmentservice.feign.EmergencyClient;
-import org.citycare.patienttreatmentservice.feign.NotificationClient;
 import org.citycare.patienttreatmentservice.feign.UserClient;
 import org.citycare.patienttreatmentservice.feign.dto.*;
 import org.citycare.patienttreatmentservice.repository.PatientRepository;
@@ -45,7 +44,6 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
     private final EmergencyClient emergencyClient;
     private final UserClient userClient;
     private final StaffClient staffClient;
-    private final NotificationClient notificationClient;
     // --------------------------------------------Patient -----------------------------------------
 
     @Transactional
@@ -96,15 +94,6 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
                 .build();
 
         Patient savedPatient = patientRepository.save(patient);
-
-        try {
-            notificationClient.sendPatientEvent(new NotificationClient.PatientEventPayload(
-                savedPatient.getPatientId(), savedPatient.getCitizenId(), null,
-                "ADMITTED", "ADMITTED", null, null, null
-            ));
-        } catch (Exception e) {
-            log.warn("Could not send patient admitted notification", e);
-        }
 
         // 5. Release Ambulance
         try {
@@ -244,16 +233,6 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
             Patient updatedPatient = patientRepository.save(patient);
         log.info("Patient ID: {} status updated to {} successfully", id, status);
 
-        try {
-            String eventType = (status == Patient.Status.DISCHARGED) ? "DISCHARGED" : "STATUS_CHANGED";
-            notificationClient.sendPatientEvent(new NotificationClient.PatientEventPayload(
-                updatedPatient.getPatientId(), updatedPatient.getCitizenId(), null,
-                eventType, status.name(), null, null, null
-            ));
-        } catch (Exception e) {
-            log.warn("Could not send patient status notification", e);
-        }
-
         return updatedPatient;
         } catch (Exception e) {
             log.error("Database error while updating patient status: {}", e.getMessage());
@@ -369,15 +348,6 @@ public class PatientTreatmentService implements PatientTreatmentInterface {
 
         Treatment savedTreatment = treatmentRepository.save(treatment);
         log.info("Treatment (ID: {}) successfully assigned by {}", savedTreatment.getTreatmentId(), staff.getName());
-
-        try {
-            notificationClient.sendPatientEvent(new NotificationClient.PatientEventPayload(
-                patient.getPatientId(), patient.getCitizenId(), null,
-                "TREATMENT_ADDED", null, req.getDescription(), assignedById, null
-            ));
-        } catch (Exception e) {
-            log.warn("Could not send treatment added notification", e);
-        }
 
         return savedTreatment;
     }

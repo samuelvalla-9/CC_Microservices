@@ -48,12 +48,6 @@ spring:
             - Path=/api/citizens/**
           filters:
             - JwtAuthFilter
-        - id: NOTIFICATIONSERVICE
-          uri: lb://NOTIFICATIONSERVICE
-          predicates:
-            - Path=/notifications/**
-          filters:
-            - JwtAuthFilter
         - id: COMPLIANCESERVICE
           uri: lb://COMPLIANCESERVICE
           predicates:
