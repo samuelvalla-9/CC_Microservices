@@ -105,7 +105,7 @@ public class ComplianceController {
     }
 
     @PatchMapping("/audits/{id}/status")
-    @PreAuthorize("hasRole('ADMIN') or @complianceSecurity.canAccessAudit(authentication, #id)")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('COMPLIANCE_OFFICER')")
     public ResponseEntity<ApiResponse<Audit>> updateAuditStatus(
             @PathVariable Long id,
             @RequestParam Audit.Status status,
@@ -139,4 +139,3 @@ public class ComplianceController {
                 complianceServiceImpl.getLogsByUser(actorId, userId)));
     }
 }
-

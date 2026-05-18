@@ -86,25 +86,11 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- JWT -->
+        <!-- JWT: Uses centralized jwt-shared-utils -->
         <dependency>
             <groupId>org.citycare</groupId>
             <artifactId>jwt-shared-utils</artifactId>
             <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-impl</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-jackson</artifactId>
-            <scope>runtime</scope>
         </dependency>
 
         <!-- Email -->
